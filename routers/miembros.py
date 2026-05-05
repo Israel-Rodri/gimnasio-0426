@@ -7,11 +7,16 @@ from database import get_session
 from models.miembros import Miembro
 from models.entrenadores import Entrenador
 from models.sedes import Sede
-from schemas.miembros import CreateMiembro, UpdateMiembro, UpdateMiembroOptional
+from schemas.miembros import CreateMiembro, UpdateMiembro, UpdateMiembroOptional, MiembroResponse
+from schemas.evaluaciones import EvaluacionFisicaResponse
+from schemas.planes import PlanResponse
+from schemas.pagos import PagoResponse
+from schemas.entrenadores import EntrenadorResponse
+from schemas.base import MessageResponse
 
 router = APIRouter(prefix="/miembro", tags=["Miembros"])
 
-@router.post("/")
+@router.post("/", response_model=MessageResponse[MiembroResponse])
 def create_miembro(data: CreateMiembro, session: Session = Depends(get_session)):
     existing = session.exec(
         select(Miembro).where(
@@ -46,14 +51,14 @@ def create_miembro(data: CreateMiembro, session: Session = Depends(get_session))
     session.refresh(miembro)
     return {"message":f"Miembro {miembro.nombre} {miembro.apellido} creado de forma exitosa", "detail":miembro}
 
-@router.get("/all/", response_model=list[Miembro])
+@router.get("/all/", response_model=list[MiembroResponse])
 def get_all_miembro(session: Session = Depends(get_session)):
     miembro = session.exec(select(Miembro)).all()
     if not miembro:
         raise HTTPException(status_code=404, detail="No se encuentran miembros registrados")
     return miembro
 
-@router.get("/", response_model=list[Miembro])
+@router.get("/", response_model=list[MiembroResponse])
 def get_active_miembro(session: Session = Depends(get_session)):
     miembro = session.exec(
         select(Miembro).where(
@@ -64,7 +69,7 @@ def get_active_miembro(session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="No se encuentran miembros registrados o activos")
     return miembro
 
-@router.get("/filter/", response_model=list[Miembro])
+@router.get("/filter/", response_model=list[MiembroResponse])
 def filter_miembro(
         miembro_ci: Optional[int] = Query(default=None),
         miembro_nombre: Optional[str] = Query(default=None),
@@ -96,7 +101,7 @@ def filter_miembro(
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.get("/{miembro_ci}/")
+@router.get("/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
 def get_miembro_by_ci(miembro_ci: int, session: Session = Depends(get_session)):
     miembro = session.exec(
         select(Miembro).where(
@@ -105,9 +110,9 @@ def get_miembro_by_ci(miembro_ci: int, session: Session = Depends(get_session)):
     ).first()
     if not miembro:
         raise HTTPException(status_code=404, detail="No se encuentra un miembro asociado a la cedula ingresada")
-    return miembro
+    return {"message": f"Miembro {miembro.nombre} {miembro.apellido} encontrado de forma exitosa", "detail": miembro}
 
-@router.get("/{miembro_ci}/evaluaciones/")
+@router.get("/{miembro_ci}/evaluaciones/", response_model=MessageResponse[list[EvaluacionFisicaResponse]])
 def get_evaluaciones_miembro(miembro_ci: int, session: Session = Depends(get_session)):
     miembro = session.exec(
         select(Miembro).where(
@@ -123,7 +128,7 @@ def get_evaluaciones_miembro(miembro_ci: int, session: Session = Depends(get_ses
         raise HTTPException(status_code=404, detail=f"El miembro {miembro.nombre} {miembro.apellido} no tiene evaluaciones relacionadas")
     return {"message":f"Evaluaciones del miembro {miembro.nombre} {miembro.apellido}:", "detail":evaluaciones}
 
-@router.get("/{miembro_ci}/planes/")
+@router.get("/{miembro_ci}/planes/", response_model=MessageResponse[list[PlanResponse]])
 def get_planes_miembro(miembro_ci: int, session: Session = Depends(get_session)):
     miembro = session.exec(
         select(Miembro).where(
@@ -139,7 +144,7 @@ def get_planes_miembro(miembro_ci: int, session: Session = Depends(get_session))
         raise HTTPException(status_code=404, detail=f"El miembro {miembro.nombre} {miembro.apellido} no tiene planes relacionados")
     return {"message":f"Planes del miembro {miembro.nombre} {miembro.apellido}:", "detail":planes}
 
-@router.get("/{miembro_ci}/pagos/")
+@router.get("/{miembro_ci}/pagos/", response_model=MessageResponse[list[PagoResponse]])
 def get_pagos_miembro(miembro_ci: int, session: Session = Depends(get_session)):
     miembro = session.exec(
         select(Miembro).where(
@@ -171,7 +176,7 @@ def asociar_entrenador_a_miembro(miembro_ci: int, entrenador_ci: int, session: S
     session.commit()
     return {"message":f"Entrenador {entrenador.nombre} asociado de forma exitosa al miembro {miembro.nombre}"}
 
-@router.get("/{miembro_ci}/entrenadores/")
+@router.get("/{miembro_ci}/entrenadores/", response_model=list[EntrenadorResponse])
 def get_entrenadores_miembro(miembro_ci: int, session: Session = Depends(get_session)):
     miembro = session.exec(
         select(Miembro).where(
@@ -182,7 +187,7 @@ def get_entrenadores_miembro(miembro_ci: int, session: Session = Depends(get_ses
         raise HTTPException(status_code=404, detail=f"No existe un miembro con la cedula {miembro_ci}")
     return miembro.entrenadores
 
-@router.patch("/update/{miembro_ci}/")
+@router.patch("/update/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
 def patch_miembro(miembro_ci: int, data: UpdateMiembroOptional, session: Session = Depends(get_session)):
     miembro = session.exec(
         select(Miembro).where(
@@ -214,7 +219,7 @@ def patch_miembro(miembro_ci: int, data: UpdateMiembroOptional, session: Session
     session.refresh(miembro)
     return {"message":f"El miembro {nombre} ha sido actualizado de forma exitosa", "detail":miembro}
 
-@router.put("/update/{miembro_ci}/")
+@router.put("/update/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
 def put_miembro(miembro_ci: int, data: UpdateMiembro, session: Session = Depends(get_session)):
     miembro = session.exec(
         select(Miembro).where(
@@ -238,7 +243,7 @@ def put_miembro(miembro_ci: int, data: UpdateMiembro, session: Session = Depends
     session.refresh(miembro)
     return {"message":f"El miembro {nombre} ha sido actualizado de forma exitosa", "detail":miembro}
 
-@router.delete("/{miembro_ci}/")
+@router.delete("/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
 def inactivate_miembro(miembro_ci: int, session: Session = Depends(get_session)):
     miembro = session.exec(select(Miembro).where(Miembro.ci == miembro_ci)).first()
     if not miembro:
@@ -250,7 +255,7 @@ def inactivate_miembro(miembro_ci: int, session: Session = Depends(get_session))
     session.refresh(miembro)
     return {"message":f"Miembro {miembro.nombre} inactivado de forma exitosa", "detail":miembro}
 
-@router.patch("/{miembro_ci}/")
+@router.patch("/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
 def activate_miembro(miembro_ci: int, session: Session = Depends(get_session)):
     miembro = session.exec(select(Miembro).where(Miembro.ci == miembro_ci)).first()
     if not miembro:

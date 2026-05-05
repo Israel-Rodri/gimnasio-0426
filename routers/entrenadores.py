@@ -5,11 +5,13 @@ from pydantic import EmailStr
 from database import get_session
 from models.entrenadores import Entrenador
 from models.sedes import Sede
-from schemas.entrenadores import CreateEntrenador, UpdateEntrenador, UpdateEntrenadorOptional
+from schemas.entrenadores import CreateEntrenador, UpdateEntrenador, UpdateEntrenadorOptional, EntrenadorResponse
+from schemas.miembros import MiembroResponse
+from schemas.base import MessageResponse
 
 router = APIRouter(prefix="/entrenador", tags=["Entrenadores"])
 
-@router.post("/")
+@router.post("/", response_model=MessageResponse[EntrenadorResponse])
 def create_entrenador(data: CreateEntrenador, session: Session = Depends(get_session)):
     existing = session.exec(
         select(Entrenador).where(
@@ -37,21 +39,21 @@ def create_entrenador(data: CreateEntrenador, session: Session = Depends(get_ses
     session.refresh(entrenador)
     return {"message":f"Entrenador {entrenador.nombre} {entrenador.apellido} creado de forma exitosa", "detail":entrenador}
 
-@router.get("/all/", response_model=list[Entrenador])
+@router.get("/all/", response_model=list[EntrenadorResponse])
 def get_entrenador(session: Session = Depends(get_session)):
     entrenador = session.exec(select(Entrenador)).all()
     if not entrenador:
         raise HTTPException(status_code=404, detail="No existen entrenadores registrados")
     return entrenador
 
-@router.get("/", response_model=list[Entrenador])
+@router.get("/", response_model=list[EntrenadorResponse])
 def get_active_entrenadores(session: Session = Depends(get_session)):
     entrenador = session.exec(select(Entrenador).where(Entrenador.estado == True)).all()
     if not entrenador:
         raise HTTPException(status_code=404, detail="No existen entrenadores registrados o activos")
     return entrenador
 
-@router.get("/filter/", response_model=list[Entrenador])
+@router.get("/filter/", response_model=list[EntrenadorResponse])
 def filter_entrenador(
     entrenador_ci: Optional[int] = Query(default=None),
     entrenador_nombre: Optional[str] = Query(default=None),
@@ -77,16 +79,16 @@ def filter_entrenador(
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.get("/{entrenador_ci}/")
+@router.get("/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
 def get_entrenador_by_ci(entrenador_ci: int, session: Session = Depends(get_session)):
     entrenador = session.exec(
         select(Entrenador).where(Entrenador.ci == entrenador_ci)
     ).first()
     if not entrenador:
         raise HTTPException(status_code=404, detail=f"No se encuentra ningun entrenador con la cedula {entrenador_ci}")
-    return entrenador
+    return {"message": f"Entrenador {entrenador.nombre} {entrenador.apellido} encontrado de forma exitosa", "detail": entrenador}
 
-@router.get("/{entrenador_ci}/miembros/")
+@router.get("/{entrenador_ci}/miembros/", response_model=list[MiembroResponse])
 def get_miembros_by_entrenador(entrenador_ci: int, session: Session = Depends(get_session)):
     entrenador = session.exec(
         select(Entrenador).where(
@@ -97,7 +99,7 @@ def get_miembros_by_entrenador(entrenador_ci: int, session: Session = Depends(ge
         raise HTTPException(status_code=404, detail=f"No existe un entrenador con la cedula {entrenador_ci}")
     return entrenador.miembros
 
-@router.put("/update/{entrenador_ci}/")
+@router.put("/update/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
 def put_entrenador(entrenador_ci: int, data: UpdateEntrenador, session: Session = Depends(get_session)):
     entrenador = session.exec(select(Entrenador).where(Entrenador.ci==entrenador_ci)).first()
     if not entrenador:
@@ -117,7 +119,7 @@ def put_entrenador(entrenador_ci: int, data: UpdateEntrenador, session: Session 
     session.refresh(entrenador)
     return {"message":f"El entrenador {nombre} fue actualizado de forma exitosa", "detail":entrenador}
 
-@router.patch("/update/{entrenador_ci}/")
+@router.patch("/update/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
 def patch_entrenador(entrenador_ci: int, data: UpdateEntrenadorOptional, session: Session = Depends(get_session)):
     entrenador = session.exec(select(Entrenador).where(Entrenador.ci==entrenador_ci)).first()
     if not entrenador:
@@ -145,7 +147,7 @@ def patch_entrenador(entrenador_ci: int, data: UpdateEntrenadorOptional, session
     session.refresh(entrenador)
     return {"message":f"El entrenador {nombre} fue actualizado de forma exitosa", "detail":entrenador}
 
-@router.delete("/{entrenador_ci}/")
+@router.delete("/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
 def inactivate(entrenador_ci: int, session: Session = Depends(get_session)):
     entrenador = session.exec(select(Entrenador).where(Entrenador.ci==entrenador_ci)).first()
     if not entrenador:
@@ -157,7 +159,7 @@ def inactivate(entrenador_ci: int, session: Session = Depends(get_session)):
     session.refresh(entrenador)
     return {"message":f"El entrenador {entrenador.nombre} fue inactivado de forma exitosa", "detail":entrenador}
 
-@router.patch("/{entrenador_ci}/")
+@router.patch("/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
 def activate(entrenador_ci: int, session: Session = Depends(get_session)):
     entrenador = session.exec(select(Entrenador).where(Entrenador.ci==entrenador_ci)).first()
     if not entrenador:

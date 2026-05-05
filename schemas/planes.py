@@ -20,3 +20,11 @@ class UpdatePlanOptional(SQLModel):
     duracion: Optional[float] = Field(default=None, gt=0)
     precio: Optional[float] = Field(default=None, gt=0)
     beneficios: Optional[List[str]] = Field(default=None)
+
+class PlanResponse(SQLModel):
+    id: int
+    nombre: str
+    duracion: float
+    precio: float
+    beneficios: List[str] = []
+    miembro_id: int

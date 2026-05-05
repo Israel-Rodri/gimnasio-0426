@@ -6,3 +6,7 @@ class CreateMetodoPago(SQLModel):
 
 class UpdateMetodoPago(SQLModel):
     nombre: str = Field(max_length=50)
+
+class MetodoPagoResponse(SQLModel):
+    id: int
+    nombre: str

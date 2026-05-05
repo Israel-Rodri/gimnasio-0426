@@ -24,3 +24,12 @@ class UpdatePagoOptional(SQLModel):
     monto: Optional[float] = Field(default=None, gt=0)
     referencia: Optional[str] = Field(default=None, max_length=100)
     metodo_id: Optional[int] = Field(default=None)
+
+class PagoResponse(SQLModel):
+    id: int
+    mensualidades: int
+    fecha: date
+    monto: float
+    referencia: str
+    miembro_id: int
+    metodo_id: int

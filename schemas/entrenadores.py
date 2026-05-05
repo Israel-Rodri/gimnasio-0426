@@ -32,3 +32,14 @@ class UpdateEntrenadorOptional(SQLModel):
     telefono: Optional[str] = Field(default=None, max_length=20)
     email: Optional[EmailStr] = Field(default=None, max_length=255)
     sede_id: Optional[int] = Field(default=None)
+
+class EntrenadorResponse(SQLModel):
+    id: int
+    ci: int
+    nombre: str
+    apellido: str
+    especialidad: Optional[str] = None
+    certificaciones: List[str] = []
+    telefono: Optional[str] = None
+    email: Optional[EmailStr] = None
+    sede_id: int

@@ -5,11 +5,14 @@ from database import get_session
 from models.planes import Plan
 from models.miembros import Miembro
 from models.rutinas import Rutina
-from schemas.planes import CreatePlan, UpdatePlan, UpdatePlanOptional
+from schemas.planes import CreatePlan, UpdatePlan, UpdatePlanOptional, PlanResponse
+from schemas.pagos import PagoResponse
+from schemas.rutinas import RutinaResponse
+from schemas.base import MessageResponse
 
 router = APIRouter(prefix="/plan", tags=["Planes de Ejercicio"])
 
-@router.post("/")
+@router.post("/", response_model=MessageResponse[PlanResponse])
 def create_plan(data: CreatePlan, session: Session = Depends(get_session)):
     existing = session.exec(
         select(Plan).where(
@@ -40,21 +43,21 @@ def create_plan(data: CreatePlan, session: Session = Depends(get_session)):
     session.refresh(plan)
     return {"message":f"Plan {plan.nombre} creado de forma exitosa", "detail":plan}
 
-@router.get("/all/", response_model=list[Plan])
+@router.get("/all/", response_model=list[PlanResponse])
 def get_all_plan(session: Session = Depends(get_session)):
     plan = session.exec(select(Plan)).all()
     if not plan:
         raise HTTPException(status_code=404, detail="No existe ningun plan de ejercicio registrado")
     return plan
 
-@router.get("/", response_model=list[Plan])
+@router.get("/", response_model=list[PlanResponse])
 def get_active_plan(session: Session = Depends(get_session)):
     plan = session.exec(select(Plan).where(Plan.estado==True)).all()
     if not plan:
         raise HTTPException(status_code=404, detail="No existe ningun plan de ejercicio o no hay ningun plan de ejercicio activo")
     return plan
 
-@router.get("/filter/")
+@router.get("/filter/", response_model=list[PlanResponse])
 def filter_plan(
         nombre: Optional[str] = Query(default=None),
         precio: Optional[float] = Query(default=None),
@@ -71,7 +74,7 @@ def filter_plan(
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.get("/{plan_id}/")
+@router.get("/{plan_id}/", response_model=MessageResponse[PlanResponse])
 def get_id_plan(plan_id: int, session: Session = Depends(get_session)):
     plan = session.get(Plan, plan_id)
     if not plan:
@@ -80,7 +83,7 @@ def get_id_plan(plan_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=400, detail=f"El plan {plan.nombre} se encuentra inactivo, activelo para acceder a su informacion")
     return {"message":f"Plan de entrenamiento {plan.nombre} encontrado de forma exitosa", "detail":plan}
 
-@router.get("/{plan_id}/pagos/")
+@router.get("/{plan_id}/pagos/", response_model=MessageResponse[list[PagoResponse]])
 def get_pagos_plan(plan_id: int, session: Session = Depends(get_session)):
     plan = session.get(Plan, plan_id)
     if not plan:
@@ -108,7 +111,7 @@ def asociar_rutina_a_plan(plan_id: int, rutina_id: int, session: Session = Depen
     session.commit()
     return {"message":f"Rutina {rutina.nombre} asociada de forma exitosa al plan {plan.nombre}"}
 
-@router.get("/{plan_id}/rutinas/")
+@router.get("/{plan_id}/rutinas/", response_model=MessageResponse[list[RutinaResponse]])
 def get_rutinas_plan(plan_id: int, session: Session = Depends(get_session)):
     plan = session.get(Plan, plan_id)
     if not plan:
@@ -120,7 +123,7 @@ def get_rutinas_plan(plan_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail=f"No existen rutinas asociadas al plan {plan.nombre}")
     return {"message":f"Rutinas asociadas al plan {plan.nombre}:", "detail":rutinas}
 
-@router.put("/update/{plan_id}/")
+@router.put("/update/{plan_id}/", response_model=MessageResponse[PlanResponse])
 def put_plan(plan_id: int, data: UpdatePlan, session: Session = Depends(get_session)):
     plan = session.get(Plan, plan_id)
     if not plan:
@@ -136,7 +139,7 @@ def put_plan(plan_id: int, data: UpdatePlan, session: Session = Depends(get_sess
     session.refresh(plan)
     return {"message":f"El plan de ejercicio {nombre} ha sido actualizado de forma exitosa", "detail":plan}
 
-@router.patch("/update/{plan_id}/")
+@router.patch("/update/{plan_id}/", response_model=MessageResponse[PlanResponse])
 def patch_plan(plan_id: int, data: UpdatePlanOptional, session: Session = Depends(get_session)):
     plan = session.get(Plan, plan_id)
     if not plan:
@@ -156,7 +159,7 @@ def patch_plan(plan_id: int, data: UpdatePlanOptional, session: Session = Depend
     session.refresh(plan)
     return {"message":f"El plan {nombre} fue actualizado de forma exitosa", "detail":plan}
 
-@router.delete("/{plan_id}/")
+@router.delete("/{plan_id}/", response_model=MessageResponse[PlanResponse])
 def inactivate_plan(plan_id: int, session: Session = Depends(get_session)):
     plan = session.get(Plan, plan_id)
     if not plan:
@@ -168,7 +171,7 @@ def inactivate_plan(plan_id: int, session: Session = Depends(get_session)):
     session.refresh(plan)
     return {"message":f"El plan {plan.nombre} fue inactivado exitosamente", "detail":plan}
 
-@router.patch("/{plan_id}/")
+@router.patch("/{plan_id}/", response_model=MessageResponse[PlanResponse])
 def activate_plan(plan_id: int, session: Session = Depends(get_session)):
     plan = session.get(Plan, plan_id)
     if not plan:

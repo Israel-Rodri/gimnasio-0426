@@ -3,11 +3,13 @@ from sqlmodel import Session, select
 from typing import Optional
 from database import get_session
 from models.rutinas import Rutina
-from schemas.rutinas import CreateRutina, UpdateRutina, UpdateRutinaOptional
+from schemas.rutinas import CreateRutina, UpdateRutina, UpdateRutinaOptional, RutinaResponse
+from schemas.planes import PlanResponse
+from schemas.base import MessageResponse
 
 router = APIRouter(prefix="/rutina", tags=["Rutinas de Ejercicio"])
 
-@router.post("/")
+@router.post("/", response_model=MessageResponse[RutinaResponse])
 def create_rutina(data: CreateRutina, session: Session = Depends(get_session)):
     existing = session.exec(
         select(Rutina).where(
@@ -29,14 +31,14 @@ def create_rutina(data: CreateRutina, session: Session = Depends(get_session)):
     session.refresh(rutina)
     return {"message":f"Rutina {rutina.nombre} creada de forma exitosa", "detail":rutina}
 
-@router.get("/all/", response_model=list[Rutina])
+@router.get("/all/", response_model=list[RutinaResponse])
 def get_all_rutina(session: Session = Depends(get_session)):
     rutina = session.exec(select(Rutina)).all()
     if not rutina:
         raise HTTPException(status_code=404, detail="No existen rutinas de ejercicio registradas")
     return rutina
 
-@router.get("/", response_model=list[Rutina])
+@router.get("/", response_model=list[RutinaResponse])
 def get_active_rutina(session: Session = Depends(get_session)):
     rutina = session.exec(
         select(Rutina).where(
@@ -47,7 +49,7 @@ def get_active_rutina(session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="No existen rutinas registradas o no existen rutinas activas")
     return rutina
 
-@router.get("/filter/")
+@router.get("/filter/", response_model=list[RutinaResponse])
 def filter_rutina(
     rutina_nombre: Optional[str] = Query(default=None),
     rutina_objetivo: Optional[str] = Query(default=None),
@@ -70,14 +72,14 @@ def filter_rutina(
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.get("/{rutina_id}/")
+@router.get("/{rutina_id}/", response_model=MessageResponse[RutinaResponse])
 def get_rutina_by_id(rutina_id: int, session: Session = Depends(get_session)):
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
         raise HTTPException(status_code=404, detail=f"No existe una rutina asociada a la ID {rutina_id}")
-    return rutina
+    return {"message": f"Rutina {rutina.nombre} encontrada de forma exitosa", "detail": rutina}
 
-@router.get("/{rutina_id}/planes/")
+@router.get("/{rutina_id}/planes/", response_model=MessageResponse[list[PlanResponse]])
 def get_planes_rutina(rutina_id: int, session: Session = Depends(get_session)):
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
@@ -89,7 +91,7 @@ def get_planes_rutina(rutina_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail=f"La rutina {rutina.nombre} no tiene planes asociados")
     return {"message":f"Planes asociados a la rutina {rutina.nombre}:", "detail":planes}
 
-@router.patch("/update/{rutina_id}/")
+@router.patch("/update/{rutina_id}/", response_model=MessageResponse[RutinaResponse])
 def patch_rutina(rutina_id: int, data: UpdateRutinaOptional, session: Session = Depends(get_session)):
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
@@ -111,7 +113,7 @@ def patch_rutina(rutina_id: int, data: UpdateRutinaOptional, session: Session = 
     session.refresh(rutina)
     return {"message":f"La rutina {nombre} ha sido actualizada de forma exitosa", "detail":rutina}
 
-@router.put("/update/{rutina_id}/")
+@router.put("/update/{rutina_id}/", response_model=MessageResponse[RutinaResponse])
 def put_rutina(rutina_id: int, data: UpdateRutina, session: Session = Depends(get_session)):
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
@@ -128,7 +130,7 @@ def put_rutina(rutina_id: int, data: UpdateRutina, session: Session = Depends(ge
     session.refresh(rutina)
     return {"message":f"La rutina {nombre} ha sido actualizada de forma exitosa", "detail":rutina}
 
-@router.delete("/{rutina_id}/")
+@router.delete("/{rutina_id}/", response_model=MessageResponse[RutinaResponse])
 def inactivate_rutina(rutina_id: int, session: Session = Depends(get_session)):
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
@@ -140,7 +142,7 @@ def inactivate_rutina(rutina_id: int, session: Session = Depends(get_session)):
     session.refresh(rutina)
     return {"message":f"La rutina {rutina.nombre} ha sido inactivada de forma exitosa", "detail":rutina}
 
-@router.patch("/{rutina_id}/")
+@router.patch("/{rutina_id}/", response_model=MessageResponse[RutinaResponse])
 def activate_rutina(rutina_id: int, session: Session = Depends(get_session)):
     rutina = session.get(Rutina, rutina_id)
     if not rutina:

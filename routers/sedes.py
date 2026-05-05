@@ -3,11 +3,14 @@ from sqlmodel import Session, select
 from typing import Optional
 from database import get_session
 from models.sedes import Sede
-from schemas.sedes import CreateSede, UpdateSede, UpdateSedeOptional
+from schemas.sedes import CreateSede, UpdateSede, UpdateSedeOptional, SedeResponse
+from schemas.miembros import MiembroResponse
+from schemas.entrenadores import EntrenadorResponse
+from schemas.base import MessageResponse
 
 router = APIRouter(prefix="/sede", tags=["Sedes"])
 
-@router.post("/")
+@router.post("/", response_model=MessageResponse[SedeResponse])
 def create_sede(data: CreateSede, session: Session = Depends(get_session)):
     existing = session.exec(
         select(Sede).where(
@@ -28,21 +31,21 @@ def create_sede(data: CreateSede, session: Session = Depends(get_session)):
     session.refresh(sede)
     return {"message":f"Sede {sede.nombre} creada exitosamente", "detail":sede}
 
-@router.get("/all/", response_model=list[Sede])
+@router.get("/all/", response_model=list[SedeResponse])
 def get_all_sede(session: Session = Depends(get_session)):
     sede = session.exec(select(Sede)).all()
     if not sede:
         raise HTTPException(status_code=404, detail="No existen sedes registradas")
     return sede
 
-@router.get("/", response_model=list[Sede])
+@router.get("/", response_model=list[SedeResponse])
 def get_active_sede(session: Session = Depends(get_session)):
     sede = session.exec(select(Sede).where(Sede.estado==True)).all()
     if not sede:
         raise HTTPException(status_code=404, detail="No existen sedes activas")
     return sede
 
-@router.get("/filter/", response_model=list[Sede])
+@router.get("/filter/", response_model=list[SedeResponse])
 def filter_sede(
         sede_nombre: Optional[str] = Query(None),
         sede_direccion: Optional[str] = Query(None),
@@ -59,7 +62,7 @@ def filter_sede(
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.get("/{sede_id}/")
+@router.get("/{sede_id}/", response_model=MessageResponse[SedeResponse])
 def get_id_sede(sede_id: int, session: Session = Depends(get_session)):
     sede = session.get(Sede, sede_id)
     if not sede:
@@ -68,7 +71,7 @@ def get_id_sede(sede_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=400, detail=f"La sede {sede.nombre} se encuentra inactiva, activela para poder acceder a su informacion")
     return {"message":f"Sede {sede.nombre} encontrada de forma exitosa", "detail":sede}
 
-@router.get("/{sede_id}/miembros/")
+@router.get("/{sede_id}/miembros/", response_model=MessageResponse[list[MiembroResponse]])
 def get_miembros_sede(sede_id: int, session: Session = Depends(get_session)):
     sede = session.get(Sede, sede_id)
     if not sede:
@@ -80,7 +83,7 @@ def get_miembros_sede(sede_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail=f"No existen miembros asociados a la sede con la ID {sede_id}")
     return {"message":f"Miembros de la sede con la ID {sede_id}", "detail":miembros}
 
-@router.get("/{sede_id}/entrenadores/")
+@router.get("/{sede_id}/entrenadores/", response_model=MessageResponse[list[EntrenadorResponse]])
 def get_entrenadores_sede(sede_id: int, session: Session = Depends(get_session)):
     sede = session.get(Sede, sede_id)
     if not sede:
@@ -92,7 +95,7 @@ def get_entrenadores_sede(sede_id: int, session: Session = Depends(get_session))
         raise HTTPException(status_code=404, detail=f"No existen entrenadores asociados a la sede con la ID {sede_id}")
     return {"message":f"Entrenadores de la sede con la ID {sede_id}", "detail":entrenadores}
 
-@router.put("/update/{sede_id}/")
+@router.put("/update/{sede_id}/", response_model=MessageResponse[SedeResponse])
 def put_sede(sede_id: int, data: UpdateSede, session: Session = Depends(get_session)):
     sede = session.get(Sede, sede_id)
     if not sede:
@@ -107,7 +110,7 @@ def put_sede(sede_id: int, data: UpdateSede, session: Session = Depends(get_sess
     session.refresh(sede)
     return {"message":f"Sede {sede.nombre} actualizada de forma exitosa", "detail":sede}
 
-@router.patch("/update/{sede_id}/")
+@router.patch("/update/{sede_id}/", response_model=MessageResponse[SedeResponse])
 def patch_sede(sede_id: int, data: UpdateSedeOptional, session: Session = Depends(get_session)):
     sede = session.get(Sede, sede_id)
     if not sede:
@@ -126,7 +129,7 @@ def patch_sede(sede_id: int, data: UpdateSedeOptional, session: Session = Depend
     session.refresh(sede)
     return {"message":f"Sede {sede.nombre} actualizada de forma correcta", "detail":sede}
 
-@router.delete("/{sede_id}/")
+@router.delete("/{sede_id}/", response_model=MessageResponse[SedeResponse])
 def inactivate_sede(sede_id: int, session: Session = Depends(get_session)):
     sede = session.get(Sede, sede_id)
     if not sede:
@@ -138,7 +141,7 @@ def inactivate_sede(sede_id: int, session: Session = Depends(get_session)):
     session.refresh(sede)
     return {"message":f"La sede {sede.nombre} fue inactivada de forma exitosa", "detail":sede}
 
-@router.patch("/{sede_id}/")
+@router.patch("/{sede_id}/", response_model=MessageResponse[SedeResponse])
 def activate_sede(sede_id: int, session: Session = Depends(get_session)):
     sede = session.get(Sede, sede_id)
     if not sede:

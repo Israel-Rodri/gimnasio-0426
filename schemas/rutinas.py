@@ -22,3 +22,11 @@ class UpdateRutinaOptional(SQLModel):
     nivel: Optional[str] = Field(default=None, max_length=50)
     descripcion: Optional[str] = Field(default=None, max_length=200)
     duracion_estimada: Optional[float] = Field(default=None, gt=0)
+
+class RutinaResponse(SQLModel):
+    id: int
+    nombre: str
+    objetivo: Optional[str] = None
+    nivel: Optional[str] = None
+    descripcion: Optional[str] = None
+    duracion_estimada: Optional[float] = None

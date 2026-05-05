@@ -1,5 +1,18 @@
 # Registro de Cambios Realizados
 
+## Response Schemas y Tipado de Endpoints
+
+### 28. Creacion de Response Schemas para todos los endpoints
+**Archivo nuevo:** `schemas/base.py`
+**Archivos modificados:** `schemas/sedes.py`, `schemas/entrenadores.py`, `schemas/miembros.py`, `schemas/evaluaciones.py`, `schemas/metodos_pago.py`, `schemas/planes.py`, `schemas/rutinas.py`, `schemas/pagos.py`, `routers/sedes.py`, `routers/entrenadores.py`, `routers/miembros.py`, `routers/evaluaciones.py`, `routers/metodos_pago.py`, `routers/planes.py`, `routers/rutinas.py`, `routers/pagos.py`
+**Problema:** Los endpoints retornaban el modelo SQLModel completo, exponiendo el campo `estado` (soft-delete interno) y potencialmente relaciones de la BD en las respuestas de la API.
+**Solucion:**
+- Se creo `MessageResponse[T]`, un wrapper generico Pydantic para el patron `{"message": str, "detail": T}` usado en la mayoria de endpoints.
+- Se crearon Response schemas para cada entidad (`SedeResponse`, `EntrenadorResponse`, `MiembroResponse`, `EvaluacionFisicaResponse`, `MetodoPagoResponse`, `PlanResponse`, `RutinaResponse`, `PagoResponse`) que excluyen el campo `estado` y las relaciones.
+- Se aplico `response_model` a todos los endpoints de todos los routers para tipar correctamente las respuestas en Swagger/OpenAPI.
+- `estado_imc` se conserva en `EvaluacionFisicaResponse` ya que es un dato calculado, no el campo de soft-delete.
+- Los endpoints GET por ID que retornaban el objeto directamente ahora usan el patron `MessageResponse` para consistencia.
+
 ## Refactorizacion de Tablas Relacionales
 
 ### 27. Eliminacion de endpoints y schemas dedicados para link tables

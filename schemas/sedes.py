@@ -19,3 +19,10 @@ class UpdateSedeOptional(SQLModel):
     direccion: Optional[str] = Field(default=None, max_length=200)
     telefono: Optional[str] = Field(default=None, max_length=20)
     horario: Optional[Dict] = Field(default=None)
+
+class SedeResponse(SQLModel):
+    id: int
+    nombre: str
+    direccion: str
+    telefono: str
+    horario: Optional[Dict] = None

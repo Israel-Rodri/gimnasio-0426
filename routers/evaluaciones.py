@@ -6,7 +6,8 @@ from database import get_session
 from models.evaluaciones import EvaluacionFisica
 from models.miembros import Miembro
 from models.entrenadores import Entrenador
-from schemas.evaluaciones import CreateEvaluacionFisica, UpdateEvaluacionFisica, UpdateEvaluacionFisicaOptional
+from schemas.evaluaciones import CreateEvaluacionFisica, UpdateEvaluacionFisica, UpdateEvaluacionFisicaOptional, EvaluacionFisicaResponse
+from schemas.base import MessageResponse
 
 router = APIRouter(prefix="/evaluacion-fisica", tags=["Evaluaciones Fisicas"])
 
@@ -23,7 +24,7 @@ def calcular_estado_imc(imc: float) -> str:
     else:
         return "Obesidad"
 
-@router.post("/")
+@router.post("/", response_model=MessageResponse[EvaluacionFisicaResponse])
 def create_evaluacion(data: CreateEvaluacionFisica, session: Session = Depends(get_session)):
     miembro = session.exec(
         select(Miembro).where(
@@ -61,21 +62,21 @@ def create_evaluacion(data: CreateEvaluacionFisica, session: Session = Depends(g
     session.refresh(evaluacion)
     return {"message":"Evaluacion fisica registrada de forma exitosa", "detail":evaluacion}
 
-@router.get("/", response_model=list[EvaluacionFisica])
+@router.get("/", response_model=list[EvaluacionFisicaResponse])
 def get_active_evaluaciones(session: Session = Depends(get_session)):
     evaluacion = session.exec(select(EvaluacionFisica).where(EvaluacionFisica.estado==True)).all()
     if not evaluacion:
         raise HTTPException(status_code=404, detail="No existe ninguna evaluacion fisica registrada")
     return evaluacion
 
-@router.get("/all/", response_model=list[EvaluacionFisica])
+@router.get("/all/", response_model=list[EvaluacionFisicaResponse])
 def get_all_evaluaciones(session: Session = Depends(get_session)):
     evaluacion = session.exec(select(EvaluacionFisica)).all()
     if not evaluacion:
         raise HTTPException(status_code=404, detail="No se encuentran evaluaciones registradas")
     return evaluacion
 
-@router.get("/filter/", response_model=list[EvaluacionFisica])
+@router.get("/filter/", response_model=list[EvaluacionFisicaResponse])
 def filter_evaluacion(
     miembro_ci: Optional[int] = Query(default=None),
     fecha: Optional[date] = Query(default=None),
@@ -96,7 +97,7 @@ def filter_evaluacion(
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.patch("/update/{evaluacion_id}/")
+@router.patch("/update/{evaluacion_id}/", response_model=MessageResponse[EvaluacionFisicaResponse])
 def patch_evaluacion(evaluacion_id: int, data: UpdateEvaluacionFisicaOptional, session: Session = Depends(get_session)):
     evaluacion = session.get(EvaluacionFisica, evaluacion_id)
     if not evaluacion:
@@ -121,7 +122,7 @@ def patch_evaluacion(evaluacion_id: int, data: UpdateEvaluacionFisicaOptional, s
     session.refresh(evaluacion)
     return {"message":"Evaluacion actualizada", "detail":evaluacion}
 
-@router.put("/update/{evaluacion_id}/")
+@router.put("/update/{evaluacion_id}/", response_model=MessageResponse[EvaluacionFisicaResponse])
 def put_evaluacion(evaluacion_id: int, data: UpdateEvaluacionFisica, session: Session = Depends(get_session)):
     evaluacion = session.get(EvaluacionFisica, evaluacion_id)
     if not evaluacion:
@@ -140,7 +141,7 @@ def put_evaluacion(evaluacion_id: int, data: UpdateEvaluacionFisica, session: Se
     session.refresh(evaluacion)
     return {"message":"La evaluacion ha sido actualizada de forma exitosa", "detail":evaluacion}
 
-@router.delete("/{evaluacion_id}/")
+@router.delete("/{evaluacion_id}/", response_model=MessageResponse[EvaluacionFisicaResponse])
 def inactivate_evaluacion(evaluacion_id: int, session: Session = Depends(get_session)):
     evaluacion = session.get(EvaluacionFisica, evaluacion_id)
     if not evaluacion:
@@ -152,7 +153,7 @@ def inactivate_evaluacion(evaluacion_id: int, session: Session = Depends(get_ses
     session.refresh(evaluacion)
     return {"message":f"Evaluacion con la ID {evaluacion.id} inactivada de forma exitosa", "detail":evaluacion}
 
-@router.patch("/{evaluacion_id}/")
+@router.patch("/{evaluacion_id}/", response_model=MessageResponse[EvaluacionFisicaResponse])
 def activate_evaluacion(evaluacion_id: int, session: Session = Depends(get_session)):
     evaluacion = session.get(EvaluacionFisica, evaluacion_id)
     if not evaluacion:

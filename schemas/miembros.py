@@ -34,3 +34,15 @@ class UpdateMiembroOptional(SQLModel):
     email: Optional[EmailStr] = Field(default=None, max_length=255)
     entrenador_id: Optional[int] = Field(default=None)
     sede_id: Optional[int] = Field(default=None)
+
+class MiembroResponse(SQLModel):
+    id: int
+    ci: int
+    nombre: str
+    apellido: str
+    fecha_nac: date
+    telefono: Optional[str] = None
+    email: Optional[EmailStr] = None
+    fecha_inscripcion: date
+    entrenador_id: Optional[int] = None
+    sede_id: int

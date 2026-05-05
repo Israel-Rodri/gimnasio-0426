@@ -7,11 +7,14 @@ from models.pagos import Pago
 from models.miembros import Miembro
 from models.metodos_pago import MetodoPago
 from models.planes import Plan
-from schemas.pagos import CreatePago, UpdatePago, UpdatePagoOptional
+from schemas.pagos import CreatePago, UpdatePago, UpdatePagoOptional, PagoResponse
+from schemas.planes import PlanResponse
+from schemas.metodos_pago import MetodoPagoResponse
+from schemas.base import MessageResponse
 
 router = APIRouter(prefix="/pago", tags=["Pagos"])
 
-@router.post("/")
+@router.post("/", response_model=MessageResponse[PagoResponse])
 def create_pago(data: CreatePago, session: Session = Depends(get_session)):
     existing = session.exec(
         select(Pago).where(
@@ -44,7 +47,7 @@ def create_pago(data: CreatePago, session: Session = Depends(get_session)):
     session.refresh(pago)
     return {"message":f"Pago del cliente {miembro.nombre} con la referencia {pago.referencia} creado de forma exitosa", "detail":pago}
 
-@router.get("/", response_model=list[Pago])
+@router.get("/", response_model=list[PagoResponse])
 def get_active_pagos(session: Session = Depends(get_session)):
     pagos = session.exec(
         select(Pago).where(
@@ -55,14 +58,14 @@ def get_active_pagos(session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="No existen pagos registrados o activos")
     return pagos
 
-@router.get("/all/", response_model=list[Pago])
+@router.get("/all/", response_model=list[PagoResponse])
 def get_all_pagos(session: Session = Depends(get_session)):
     pagos = session.exec(select(Pago)).all()
     if not pagos:
         raise HTTPException(status_code=404, detail="No se encuentran pagos registrados")
     return pagos
 
-@router.get("/filter/")
+@router.get("/filter/", response_model=list[PagoResponse])
 def filter_pago(
     pago_mensualidades: Optional[int] = Query(default=None),
     pago_fecha: Optional[date] = Query(default=None),
@@ -85,12 +88,12 @@ def filter_pago(
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.get("/{pago_id}/")
+@router.get("/{pago_id}/", response_model=MessageResponse[PagoResponse])
 def get_pago_by_id(pago_id: int, session: Session = Depends(get_session)):
     pago = session.get(Pago, pago_id)
     if not pago:
         raise HTTPException(status_code=404, detail=f"No se encuentra un pago registrado con la ID {pago_id}")
-    return pago
+    return {"message": f"Pago con referencia {pago.referencia} encontrado de forma exitosa", "detail": pago}
 
 @router.post("/{pago_id}/planes/{plan_id}/")
 def asociar_plan_a_pago(pago_id: int, plan_id: int, session: Session = Depends(get_session)):
@@ -108,7 +111,7 @@ def asociar_plan_a_pago(pago_id: int, plan_id: int, session: Session = Depends(g
     session.commit()
     return {"message":f"Pago con referencia {pago.referencia} asociado de forma exitosa al plan {plan.nombre}"}
 
-@router.get("/{pago_id}/planes/")
+@router.get("/{pago_id}/planes/", response_model=MessageResponse[list[PlanResponse]])
 def get_planes_pago(pago_id: int, session: Session = Depends(get_session)):
     pago = session.get(Pago, pago_id)
     if not pago:
@@ -120,7 +123,7 @@ def get_planes_pago(pago_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail=f"No existen planes asociados al pago con la referencia {pago.referencia}")
     return {"message":f"Planes asociados al pago con la referencia {pago.referencia}", "detail":planes}
 
-@router.get("/{pago_id}/metodo/")
+@router.get("/{pago_id}/metodo/", response_model=MetodoPagoResponse)
 def get_by_metodo(pago_id: int, session: Session = Depends(get_session)):
     pago = session.get(Pago, pago_id)
     if not pago:
@@ -130,7 +133,7 @@ def get_by_metodo(pago_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="No existen metodos de pago asociados al pago")
     return metodo
 
-@router.delete("/{pago_id}/")
+@router.delete("/{pago_id}/", response_model=MessageResponse[PagoResponse])
 def inactivate_pago(pago_id: int, session: Session = Depends(get_session)):
     pago = session.get(Pago, pago_id)
     if not pago:
@@ -142,7 +145,7 @@ def inactivate_pago(pago_id: int, session: Session = Depends(get_session)):
     session.refresh(pago)
     return {"message":f"El pago con referencia {pago.referencia} fue inactivado de forma exitosa", "detail":pago}
 
-@router.patch("/{pago_id}/")
+@router.patch("/{pago_id}/", response_model=MessageResponse[PagoResponse])
 def activate_pago(pago_id: int, session: Session = Depends(get_session)):
     pago = session.get(Pago, pago_id)
     if not pago:
