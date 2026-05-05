@@ -6,34 +6,30 @@ from database import get_session
 from models.pagos import Pago
 from models.miembros import Miembro
 from models.metodos_pago import MetodoPago
+from models.planes import Plan
 from schemas.pagos import CreatePago, UpdatePago, UpdatePagoOptional
 
 router = APIRouter(prefix="/pago", tags=["Pagos"])
 
-#Crear Pagos
 @router.post("/")
 def create_pago(data: CreatePago, session: Session = Depends(get_session)):
-    if not data:
-        raise HTTPException(status_code=400, detail="Debe suministrar todos los datos solicitados")
-    exisiting = session.exec(
+    existing = session.exec(
         select(Pago).where(
-            Pago.referencia == data.referencia,
-            Pago.fecha == data.fecha,
-            Pago.monto == data.monto
+            Pago.referencia == data.referencia
         )
     ).first()
-    if exisiting:
-        raise HTTPException(status_code=400, detail=f"Ya existe un pago con la referencia {data.referencia} por el monto {data.monto} realizado el día {data.fecha}")
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Ya existe un pago con la referencia {data.referencia}")
     miembro = session.exec(
         select(Miembro).where(
             Miembro.ci == data.miembro_ci
         )
     ).first()
     if not miembro or not miembro.estado:
-        raise HTTPException(status_code=404, detail=f"El miembro con la cédula {data.miembro_ci} no se encuentra registrado o no se encuentra activo")
+        raise HTTPException(status_code=404, detail=f"El miembro con la cedula {data.miembro_ci} no se encuentra registrado o no se encuentra activo")
     metodo = session.get(MetodoPago, data.metodo_id)
     if not metodo or not metodo.estado:
-        raise HTTPException(status_code=404, detail=f"El método de pago con la ID {data.metodo_id} no se encuentra registrado o no se encuentra activo")
+        raise HTTPException(status_code=404, detail=f"El metodo de pago con la ID {data.metodo_id} no se encuentra registrado o no se encuentra activo")
     pago = Pago(
         mensualidades = data.mensualidades,
         fecha = data.fecha,
@@ -48,7 +44,6 @@ def create_pago(data: CreatePago, session: Session = Depends(get_session)):
     session.refresh(pago)
     return {"message":f"Pago del cliente {miembro.nombre} con la referencia {pago.referencia} creado de forma exitosa", "detail":pago}
 
-#Leer pagos (por id, filtro, etc.)
 @router.get("/", response_model=list[Pago])
 def get_active_pagos(session: Session = Depends(get_session)):
     pagos = session.exec(
@@ -62,35 +57,10 @@ def get_active_pagos(session: Session = Depends(get_session)):
 
 @router.get("/all/", response_model=list[Pago])
 def get_all_pagos(session: Session = Depends(get_session)):
-    pagos = session.exec(
-        select(Pago)
-    ).all()
+    pagos = session.exec(select(Pago)).all()
     if not pagos:
         raise HTTPException(status_code=404, detail="No se encuentran pagos registrados")
     return pagos
-
-@router.get("/{pago_id}/")
-def get_pago_by_id(pago_id: int, session: Session = Depends(get_session)):
-    if not pago_id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID del pago")
-    pago = session.get(Pago, pago_id)
-    if not pago:
-        raise HTTPException(status_code=404, detail=f"No se encuentra un pago registrado con la ID {pago_id}")
-    return pago
-
-@router.get("/{pago_id}/planes/")
-def get_planes_pago(pago_id: int, session: Session = Depends(get_session)):
-    if not pago_id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID del pago")
-    pago = session.get(Pago, pago_id)
-    if not pago:
-        raise HTTPException(status_code=404, detail=f"No existe un pago asociado a la ID {pago_id}")
-    if not pago.estado:
-        raise HTTPException(status_code=400, detail=f"El pago con la referencia {pago.referencia} no se encuentra activo, activelo para poder acceder a sus datos")
-    planes = pago.planes
-    if planes:
-        raise HTTPException(status_code=404, detail=f"No existen planes asociados al pago con la referencia {pago.referencia}")
-    return {"message":f"Rutinas asociadas al pago con la referencia {pago.referencia}", "detail":planes}
 
 @router.get("/filter/")
 def filter_pago(
@@ -101,24 +71,85 @@ def filter_pago(
     limite: int = 10,
     session: Session = Depends(get_session)
 ):
-    if not pago_mensualidades or not pago_fecha or not pago_monto or not pago_referencia:
+    if not pago_mensualidades and not pago_fecha and not pago_monto and not pago_referencia:
         raise HTTPException(status_code=400, detail="Debe suministrar al menos uno de los campos para filtrar")
     query = select(Pago).where(Pago.estado == True)
     if pago_mensualidades:
-        query = query.where(Pago.mensualidades.ilike(f"%{pago_mensualidades}%"))
+        query = query.where(Pago.mensualidades == pago_mensualidades)
     if pago_fecha:
-        query = query.where(Pago.fecha.ilike(f"%{pago_fecha}%"))
+        query = query.where(Pago.fecha == pago_fecha)
     if pago_monto:
-        query = query.where(Pago.monto.ilike(f"%{pago_monto}%"))
+        query = query.where(Pago.monto == pago_monto)
     if pago_referencia:
         query = query.where(Pago.referencia.ilike(f"%{pago_referencia}%"))
-    query.limit(limite)
+    query = query.limit(limite)
     return session.exec(query).all()
+
+@router.get("/{pago_id}/")
+def get_pago_by_id(pago_id: int, session: Session = Depends(get_session)):
+    pago = session.get(Pago, pago_id)
+    if not pago:
+        raise HTTPException(status_code=404, detail=f"No se encuentra un pago registrado con la ID {pago_id}")
+    return pago
+
+@router.post("/{pago_id}/planes/{plan_id}/")
+def asociar_plan_a_pago(pago_id: int, plan_id: int, session: Session = Depends(get_session)):
+    pago = session.get(Pago, pago_id)
+    if not pago:
+        raise HTTPException(status_code=404, detail=f"No existe un pago asociado a la ID {pago_id}")
+    if not pago.estado:
+        raise HTTPException(status_code=400, detail=f"El pago con la referencia {pago.referencia} no se encuentra activo")
+    plan = session.get(Plan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"No se encuentra un plan asociado a la ID {plan_id}")
+    if plan in pago.planes:
+        raise HTTPException(status_code=400, detail=f"Ya existe una relacion entre el pago con referencia {pago.referencia} y el plan {plan.nombre}")
+    pago.planes.append(plan)
+    session.commit()
+    return {"message":f"Pago con referencia {pago.referencia} asociado de forma exitosa al plan {plan.nombre}"}
+
+@router.get("/{pago_id}/planes/")
+def get_planes_pago(pago_id: int, session: Session = Depends(get_session)):
+    pago = session.get(Pago, pago_id)
+    if not pago:
+        raise HTTPException(status_code=404, detail=f"No existe un pago asociado a la ID {pago_id}")
+    if not pago.estado:
+        raise HTTPException(status_code=400, detail=f"El pago con la referencia {pago.referencia} no se encuentra activo, activelo para poder acceder a sus datos")
+    planes = pago.planes
+    if not planes:
+        raise HTTPException(status_code=404, detail=f"No existen planes asociados al pago con la referencia {pago.referencia}")
+    return {"message":f"Planes asociados al pago con la referencia {pago.referencia}", "detail":planes}
 
 @router.get("/{pago_id}/metodo/")
 def get_by_metodo(pago_id: int, session: Session = Depends(get_session)):
     pago = session.get(Pago, pago_id)
+    if not pago:
+        raise HTTPException(status_code=404, detail=f"No existe un pago asociado a la ID {pago_id}")
     metodo = pago.metodo_pago
     if not metodo:
         raise HTTPException(status_code=404, detail="No existen metodos de pago asociados al pago")
     return metodo
+
+@router.delete("/{pago_id}/")
+def inactivate_pago(pago_id: int, session: Session = Depends(get_session)):
+    pago = session.get(Pago, pago_id)
+    if not pago:
+        raise HTTPException(status_code=404, detail=f"No existe un pago asociado a la ID {pago_id}")
+    if not pago.estado:
+        raise HTTPException(status_code=400, detail=f"El pago con referencia {pago.referencia} ya se encuentra inactivo")
+    pago.estado = False
+    session.commit()
+    session.refresh(pago)
+    return {"message":f"El pago con referencia {pago.referencia} fue inactivado de forma exitosa", "detail":pago}
+
+@router.patch("/{pago_id}/")
+def activate_pago(pago_id: int, session: Session = Depends(get_session)):
+    pago = session.get(Pago, pago_id)
+    if not pago:
+        raise HTTPException(status_code=404, detail=f"No existe un pago asociado a la ID {pago_id}")
+    if pago.estado:
+        raise HTTPException(status_code=400, detail=f"El pago con referencia {pago.referencia} ya se encuentra activo")
+    pago.estado = True
+    session.commit()
+    session.refresh(pago)
+    return {"message":f"El pago con referencia {pago.referencia} fue activado de forma exitosa", "detail":pago}

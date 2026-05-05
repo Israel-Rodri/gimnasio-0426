@@ -4,15 +4,13 @@ from typing import Optional
 from database import get_session
 from models.planes import Plan
 from models.miembros import Miembro
+from models.rutinas import Rutina
 from schemas.planes import CreatePlan, UpdatePlan, UpdatePlanOptional
 
-router = APIRouter(prefix=("/plan"), tags=["Planes de Ejercicio"])
+router = APIRouter(prefix="/plan", tags=["Planes de Ejercicio"])
 
-#Crear planes
 @router.post("/")
 def create_plan(data: CreatePlan, session: Session = Depends(get_session)):
-    if not data:
-        raise HTTPException(status_code=400, detail="Debe ingresar todos los campos solicitados")
     existing = session.exec(
         select(Plan).where(
             Plan.nombre == data.nombre,
@@ -28,49 +26,38 @@ def create_plan(data: CreatePlan, session: Session = Depends(get_session)):
         )
     ).first()
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"El miembro con la cédula {data.miembro_ci} no se encuetra registrado")
+        raise HTTPException(status_code=404, detail=f"El miembro con la cedula {data.miembro_ci} no se encuentra registrado")
     plan = Plan(
         nombre = data.nombre,
         duracion = data.duracion,
+        precio = data.precio,
         beneficios = data.beneficios,
         estado = data.estado,
-        miembro_id = miembro.id 
+        miembro_id = miembro.id
     )
     session.add(plan)
     session.commit()
     session.refresh(plan)
     return {"message":f"Plan {plan.nombre} creado de forma exitosa", "detail":plan}
 
-#Leer planes (por id, filtro, etc)
 @router.get("/all/", response_model=list[Plan])
 def get_all_plan(session: Session = Depends(get_session)):
     plan = session.exec(select(Plan)).all()
     if not plan:
-        raise HTTPException(status_code=404, detail="No existe ningún plan de ejercicio registrado")
+        raise HTTPException(status_code=404, detail="No existe ningun plan de ejercicio registrado")
     return plan
 
 @router.get("/", response_model=list[Plan])
 def get_active_plan(session: Session = Depends(get_session)):
     plan = session.exec(select(Plan).where(Plan.estado==True)).all()
     if not plan:
-        raise HTTPException(status_code=404, detail="No existe ningún plan de ejercicio o no hay ningún plan de ejercicio activo")
+        raise HTTPException(status_code=404, detail="No existe ningun plan de ejercicio o no hay ningun plan de ejercicio activo")
     return plan
-
-@router.get("/{id}/")
-def get_id_plan(plan_id: int, session: Session = Depends(get_session)):
-    if not plan_id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID del plan")
-    plan = session.get(Plan, plan_id)
-    if not plan:
-        raise HTTPException(status_code=404, detail=f"No se encuentra un plan asociado a la ID {plan_id}")
-    if not plan.estado:
-        raise HTTPException(status_code=400, detail=f"El plan {plan.nombre} se encuentra inactivo, activelo para acceder a su información")
-    return {"message":f"Plan de entrenamiento {plan.nombre} encontrado de forma exitosa", "detail":plan}
 
 @router.get("/filter/")
 def filter_plan(
-        nombre: Optional[str] = Query(default=None), 
-        precio: Optional[float] = Query(default=None), 
+        nombre: Optional[str] = Query(default=None),
+        precio: Optional[float] = Query(default=None),
         limite: int = 10,
         session: Session = Depends(get_session)
     ):
@@ -80,46 +67,64 @@ def filter_plan(
     if nombre:
         query = query.where(Plan.nombre.ilike(f"%{nombre}%"))
     if precio:
-        query = query.where(Plan.precio.ilike(f"%{precio}%"))
+        query = query.where(Plan.precio == precio)
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.get("/{id}/pagos/")
+@router.get("/{plan_id}/")
+def get_id_plan(plan_id: int, session: Session = Depends(get_session)):
+    plan = session.get(Plan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"No se encuentra un plan asociado a la ID {plan_id}")
+    if not plan.estado:
+        raise HTTPException(status_code=400, detail=f"El plan {plan.nombre} se encuentra inactivo, activelo para acceder a su informacion")
+    return {"message":f"Plan de entrenamiento {plan.nombre} encontrado de forma exitosa", "detail":plan}
+
+@router.get("/{plan_id}/pagos/")
 def get_pagos_plan(plan_id: int, session: Session = Depends(get_session)):
-    if not plan_id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID del plan")
     plan = session.get(Plan, plan_id)
     if not plan:
         raise HTTPException(status_code=404, detail=f"No existe un plan asociado a la ID {plan_id}")
     if not plan.estado:
-        raise HTTPException(status_code=400, detail=f"El plan {plan.nombre} se encuentra inactivo, activelo para acceder a su información")
+        raise HTTPException(status_code=400, detail=f"El plan {plan.nombre} se encuentra inactivo, activelo para acceder a su informacion")
     pagos = plan.pagos
     if not pagos:
         raise HTTPException(status_code=404, detail=f"No existen pagos asociados al plan {plan.nombre}")
     return {"message":f"Pagos asociados al plan {plan.nombre}:", "detail":pagos}
 
-@router.get("/{id}/rutinas/")
-def get_rutinas_plan(plan_id: int, session: Session = Depends(get_session)):
-    if not plan_id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID del plan")
+@router.post("/{plan_id}/rutinas/{rutina_id}/")
+def asociar_rutina_a_plan(plan_id: int, rutina_id: int, session: Session = Depends(get_session)):
     plan = session.get(Plan, plan_id)
     if not plan:
         raise HTTPException(status_code=404, detail=f"No existe un plan asociado a la ID {plan_id}")
     if not plan.estado:
-        raise HTTPException(status_code=400, detail=f"El plan {plan.nombre} se encuentra inactivo, activelo para acceder a su información")
+        raise HTTPException(status_code=400, detail=f"El plan {plan.nombre} se encuentra inactivo")
+    rutina = session.get(Rutina, rutina_id)
+    if not rutina:
+        raise HTTPException(status_code=404, detail=f"No se encuentra una rutina asociada a la ID {rutina_id}")
+    if rutina in plan.rutinas:
+        raise HTTPException(status_code=400, detail=f"Ya existe una relacion entre la rutina {rutina.nombre} y el plan {plan.nombre}")
+    plan.rutinas.append(rutina)
+    session.commit()
+    return {"message":f"Rutina {rutina.nombre} asociada de forma exitosa al plan {plan.nombre}"}
+
+@router.get("/{plan_id}/rutinas/")
+def get_rutinas_plan(plan_id: int, session: Session = Depends(get_session)):
+    plan = session.get(Plan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"No existe un plan asociado a la ID {plan_id}")
+    if not plan.estado:
+        raise HTTPException(status_code=400, detail=f"El plan {plan.nombre} se encuentra inactivo, activelo para acceder a su informacion")
     rutinas = plan.rutinas
     if not rutinas:
-        raise HTTPException(status_code=404, detail=f"No existen pagos asociados al plan {plan.nombre}")
-    return {"message":f"Pagos asociados al plan {plan.nombre}:", "detail":rutinas}
+        raise HTTPException(status_code=404, detail=f"No existen rutinas asociadas al plan {plan.nombre}")
+    return {"message":f"Rutinas asociadas al plan {plan.nombre}:", "detail":rutinas}
 
-#Actualizar planes (put y patch)
-@router.put("/update/{id}/")
-def put_plan(id: int, data: UpdatePlan, session: Session = Depends(get_session)):
-    if not id:
-        raise HTTPException(status_code=400, detail="Debe proporcionar la ID del plan de ejercicio a actualizar")
-    plan = session.get(Plan, id)
+@router.put("/update/{plan_id}/")
+def put_plan(plan_id: int, data: UpdatePlan, session: Session = Depends(get_session)):
+    plan = session.get(Plan, plan_id)
     if not plan:
-        raise HTTPException(status_code=404, detail="No existe nigún plan de ejercicio asociado a la ID proporcionada")
+        raise HTTPException(status_code=404, detail="No existe ningun plan de ejercicio asociado a la ID proporcionada")
     if not plan.estado:
         raise HTTPException(status_code=400, detail="No se puede actualizar un plan de ejercicio inactivo")
     nombre = plan.nombre
@@ -131,34 +136,29 @@ def put_plan(id: int, data: UpdatePlan, session: Session = Depends(get_session))
     session.refresh(plan)
     return {"message":f"El plan de ejercicio {nombre} ha sido actualizado de forma exitosa", "detail":plan}
 
-@router.patch("/update/{id}/")
-def patch_plan(id: int, data: UpdatePlanOptional, session: Session = Depends(get_session)):
-    if not id:
-        raise HTTPException(status_code=400, detail="Debe proporcionar la ID del plan a actiualizar")
-    plan = session.get(Plan, id)
+@router.patch("/update/{plan_id}/")
+def patch_plan(plan_id: int, data: UpdatePlanOptional, session: Session = Depends(get_session)):
+    plan = session.get(Plan, plan_id)
     if not plan:
         raise HTTPException(status_code=404, detail="No existe un plan asociado a la ID suministrada")
     if not plan.estado:
         raise HTTPException(status_code=400, detail="No se puede actualizar un plan inactivo")
     nombre = plan.nombre
-    if data.nombre:
+    if data.nombre is not None:
         plan.nombre = data.nombre
-    if data.duracion:
+    if data.duracion is not None:
         plan.duracion = data.duracion
-    if data.precio:
+    if data.precio is not None:
         plan.precio = data.precio
-    if data.beneficios:
+    if data.beneficios is not None:
         plan.beneficios = data.beneficios
     session.commit()
     session.refresh(plan)
     return {"message":f"El plan {nombre} fue actualizado de forma exitosa", "detail":plan}
 
-#Activar y desactivar planes
-@router.delete("/{id}/")
-def inactivate_plan(id: int, session: Session = Depends(get_session)):
-    if not id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID para inactivar un plan")
-    plan = session.get(Plan, id)
+@router.delete("/{plan_id}/")
+def inactivate_plan(plan_id: int, session: Session = Depends(get_session)):
+    plan = session.get(Plan, plan_id)
     if not plan:
         raise HTTPException(status_code=404, detail="No existe un plan asociado a la ID suministrada")
     if not plan.estado:
@@ -168,11 +168,9 @@ def inactivate_plan(id: int, session: Session = Depends(get_session)):
     session.refresh(plan)
     return {"message":f"El plan {plan.nombre} fue inactivado exitosamente", "detail":plan}
 
-@router.patch("/{id}/")
-def activate_plan(id: int, session: Session = Depends(get_session)):
-    if not id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID para inactivar un plan")
-    plan = session.get(Plan, id)
+@router.patch("/{plan_id}/")
+def activate_plan(plan_id: int, session: Session = Depends(get_session)):
+    plan = session.get(Plan, plan_id)
     if not plan:
         raise HTTPException(status_code=404, detail="No existe un plan asociado a la ID suministrada")
     if plan.estado:

@@ -3,24 +3,17 @@ from sqlmodel import Session, select
 from typing import Optional
 from database import get_session
 from models.rutinas import Rutina
-from models.planes import Plan
 from schemas.rutinas import CreateRutina, UpdateRutina, UpdateRutinaOptional
 
 router = APIRouter(prefix="/rutina", tags=["Rutinas de Ejercicio"])
 
-#Crear rutinas
 @router.post("/")
 def create_rutina(data: CreateRutina, session: Session = Depends(get_session)):
-    if not data:
-        raise HTTPException(status_code=400, detail="Debe suministrar todos los campos solicitados")
     existing = session.exec(
         select(Rutina).where(
             Rutina.nombre == data.nombre
         )
     ).first()
-    plan = session.get(Plan, data.plan_id)
-    if plan == None or not plan.estado:
-        raise HTTPException(status_code=404, detail="No se encuentra un plan de ejercicio registrado con esa ID o se encuentra inactivo")
     if existing:
         raise HTTPException(status_code=400, detail=f"Ya existe una rutina registrada con el nombre {data.nombre}")
     rutina = Rutina(
@@ -36,7 +29,6 @@ def create_rutina(data: CreateRutina, session: Session = Depends(get_session)):
     session.refresh(rutina)
     return {"message":f"Rutina {rutina.nombre} creada de forma exitosa", "detail":rutina}
 
-#Leer rutinas (por id, filtrar, etc)
 @router.get("/all/", response_model=list[Rutina])
 def get_all_rutina(session: Session = Depends(get_session)):
     rutina = session.exec(select(Rutina)).all()
@@ -61,11 +53,10 @@ def filter_rutina(
     rutina_objetivo: Optional[str] = Query(default=None),
     rutina_nivel: Optional[str] = Query(default=None),
     rutina_duracion: Optional[float] = Query(default=None),
-    plan_id: Optional[int] = Query(default=None),
     limite: int = 10,
     session: Session = Depends(get_session)
 ):
-    if not rutina_nombre and not rutina_objetivo and not rutina_nivel and not rutina_duracion and not plan_id:
+    if not rutina_nombre and not rutina_objetivo and not rutina_nivel and not rutina_duracion:
         raise HTTPException(status_code=400, detail="Es necesario suministrar al menos un campo para filtrar")
     query = select(Rutina).where(Rutina.estado == True)
     if rutina_nombre:
@@ -76,77 +67,69 @@ def filter_rutina(
         query = query.where(Rutina.nivel.ilike(f"%{rutina_nivel}%"))
     if rutina_duracion:
         query = query.where(Rutina.duracion_estimada == rutina_duracion)
-    if plan_id:
-        query = query.where(Rutina.plan_id == plan_id)
-    query.limit(limite)
+    query = query.limit(limite)
     return session.exec(query).all()
+
+@router.get("/{rutina_id}/")
+def get_rutina_by_id(rutina_id: int, session: Session = Depends(get_session)):
+    rutina = session.get(Rutina, rutina_id)
+    if not rutina:
+        raise HTTPException(status_code=404, detail=f"No existe una rutina asociada a la ID {rutina_id}")
+    return rutina
 
 @router.get("/{rutina_id}/planes/")
 def get_planes_rutina(rutina_id: int, session: Session = Depends(get_session)):
-    if not rutina_id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID de la rutina")
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
         raise HTTPException(status_code=404, detail=f"No existe una rutina asociada a la ID {rutina_id}")
     if not rutina.estado:
-        raise HTTPException(status_code=400, detail=f"La rutina {rutina.nombre} no se encuentra activa, activela para acceder a su información")
+        raise HTTPException(status_code=400, detail=f"La rutina {rutina.nombre} no se encuentra activa, activela para acceder a su informacion")
     planes = rutina.planes
     if not planes:
-        raise HTTPException(status_code=404, detail=f"la rutina {rutina.nombre} no tiene planes asociados")
+        raise HTTPException(status_code=404, detail=f"La rutina {rutina.nombre} no tiene planes asociados")
     return {"message":f"Planes asociados a la rutina {rutina.nombre}:", "detail":planes}
 
-#Actualizar rutinas (put y patch)
 @router.patch("/update/{rutina_id}/")
 def patch_rutina(rutina_id: int, data: UpdateRutinaOptional, session: Session = Depends(get_session)):
-    if not rutina_id:
-        raise HTTPException(status_code=400, detail="Es necesario suministrar la ID del plan a actualizar")
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
         raise HTTPException(status_code=404, detail="No existe una rutina asociada a la ID suministrada")
     if not rutina.estado:
-        raise HTTPException(status_code=400, detail=f"La rutina {data.nombre} se encuentra inactiva")
+        raise HTTPException(status_code=400, detail=f"La rutina {rutina.nombre} se encuentra inactiva")
     nombre = rutina.nombre
-    if data.nombre:
+    if data.nombre is not None:
         rutina.nombre = data.nombre
-    if data.objetivo:
+    if data.objetivo is not None:
         rutina.objetivo = data.objetivo
-    if data.nivel:
+    if data.nivel is not None:
         rutina.nivel = data.nivel
-    if data.descripcion:
+    if data.descripcion is not None:
         rutina.descripcion = data.descripcion
-    if data.duracion_estimada:
+    if data.duracion_estimada is not None:
         rutina.duracion_estimada = data.duracion_estimada
-    if data.plan_id:
-        rutina.plan_id = data.plan_id
     session.commit()
     session.refresh(rutina)
-    return {"message":f"La rutina {nombre} ha sido actualizada de forma existosa", "detail":rutina}
+    return {"message":f"La rutina {nombre} ha sido actualizada de forma exitosa", "detail":rutina}
 
 @router.put("/update/{rutina_id}/")
 def put_rutina(rutina_id: int, data: UpdateRutina, session: Session = Depends(get_session)):
-    if not rutina_id:
-        raise HTTPException(status_code=400, detail="Es necesario suministrar la ID del plan a actualizar")
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
         raise HTTPException(status_code=404, detail="No existe una rutina asociada a la ID suministrada")
     if not rutina.estado:
-        raise HTTPException(status_code=400, detail=f"La rutina {data.nombre} se encuentra inactiva")
+        raise HTTPException(status_code=400, detail=f"La rutina {rutina.nombre} se encuentra inactiva")
     nombre = rutina.nombre
     rutina.nombre = data.nombre
     rutina.objetivo = data.objetivo
     rutina.nivel = data.nivel
     rutina.descripcion = data.descripcion
     rutina.duracion_estimada = data.duracion_estimada
-    rutina.plan_id = data.plan_id
     session.commit()
     session.refresh(rutina)
     return {"message":f"La rutina {nombre} ha sido actualizada de forma exitosa", "detail":rutina}
 
-#Activar y desactivar rutinas
 @router.delete("/{rutina_id}/")
 def inactivate_rutina(rutina_id: int, session: Session = Depends(get_session)):
-    if not rutina_id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID de la rutina a inactivar")
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
         raise HTTPException(status_code=404, detail="No existe una rutina asociada a la ID suministrada")
@@ -155,12 +138,10 @@ def inactivate_rutina(rutina_id: int, session: Session = Depends(get_session)):
     rutina.estado = False
     session.commit()
     session.refresh(rutina)
-    return {"message":f"La rutina {rutina.nombre} ha sida inactivada de forma exitosa", "detail":rutina}
+    return {"message":f"La rutina {rutina.nombre} ha sido inactivada de forma exitosa", "detail":rutina}
 
 @router.patch("/{rutina_id}/")
 def activate_rutina(rutina_id: int, session: Session = Depends(get_session)):
-    if not rutina_id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID de la rutina a activar")
     rutina = session.get(Rutina, rutina_id)
     if not rutina:
         raise HTTPException(status_code=404, detail="No existe una rutina asociada a la ID suministrada")
@@ -169,4 +150,4 @@ def activate_rutina(rutina_id: int, session: Session = Depends(get_session)):
     rutina.estado = True
     session.commit()
     session.refresh(rutina)
-    return {"message":f"La rutina {rutina.nombre} ha sida activada de forma exitosa", "detail":rutina}
+    return {"message":f"La rutina {rutina.nombre} ha sido activada de forma exitosa", "detail":rutina}

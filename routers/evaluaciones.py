@@ -5,63 +5,67 @@ from datetime import date
 from database import get_session
 from models.evaluaciones import EvaluacionFisica
 from models.miembros import Miembro
+from models.entrenadores import Entrenador
 from schemas.evaluaciones import CreateEvaluacionFisica, UpdateEvaluacionFisica, UpdateEvaluacionFisicaOptional
 
 router = APIRouter(prefix="/evaluacion-fisica", tags=["Evaluaciones Fisicas"])
 
 def calcular_imc(talla: float, peso: float) -> float:
-    imc = peso/(talla**2)
-    return imc
+    return peso / (talla ** 2)
 
 def calcular_estado_imc(imc: float) -> str:
     if imc < 18.5:
         return "Bajo peso"
-    elif imc >= 18.5 and imc <= 24.9:
+    elif imc <= 24.9:
         return "Peso Normal"
-    elif imc >= 25 and imc <= 29.9:
+    elif imc <= 29.9:
         return "Sobrepeso"
     else:
         return "Obesidad"
 
 @router.post("/")
 def create_evaluacion(data: CreateEvaluacionFisica, session: Session = Depends(get_session)):
-    if not data:
-        raise HTTPException(status_code=400, detail="Debe suministrar todos los datos solicitados")
-    existing = session.exec(
-        select(EvaluacionFisica).where(
-            EvaluacionFisica.fecha_evaluacion == data.fecha_evaluacion,
-            EvaluacionFisica.miembro_ci == data.miembro_ci
-        )
-    ).first()
     miembro = session.exec(
         select(Miembro).where(
             Miembro.ci == data.miembro_ci
         )
     ).first()
-    if miembro == None or not miembro.estado:
-        raise HTTPException(status_code=400, detail=f"El miembro con la cédula {data.miembro_ci} no se encuentra registrado o no se encuentra activo")
+    if not miembro or not miembro.estado:
+        raise HTTPException(status_code=400, detail=f"El miembro con la cedula {data.miembro_ci} no se encuentra registrado o no se encuentra activo")
+    entrenador = session.get(Entrenador, data.entrenador_id)
+    if not entrenador or not entrenador.estado:
+        raise HTTPException(status_code=400, detail=f"El entrenador con la ID {data.entrenador_id} no se encuentra registrado o no se encuentra activo")
+    existing = session.exec(
+        select(EvaluacionFisica).where(
+            EvaluacionFisica.fecha_evaluacion == data.fecha_evaluacion,
+            EvaluacionFisica.miembro_id == miembro.id
+        )
+    ).first()
     if existing:
-        raise HTTPException(status_code=400, detail=f"Ya existe una evaluación realizada al miembro {miembro.nombre} {miembro.apellido} en la fecha {data.fecha_evaluacion}")
+        raise HTTPException(status_code=400, detail=f"Ya existe una evaluacion realizada al miembro {miembro.nombre} {miembro.apellido} en la fecha {data.fecha_evaluacion}")
+    imc = calcular_imc(data.talla, data.peso)
+    estado_imc = calcular_estado_imc(imc)
     evaluacion = EvaluacionFisica(
         peso = data.peso,
         talla = data.talla,
-        imc = calcular_imc(data.talla, data.peso),
-        estado_imc = calcular_estado_imc(data.imc),
+        imc = imc,
+        estado_imc = estado_imc,
         medidas = data.medidas,
         observaciones = data.observaciones,
         fecha_evaluacion = data.fecha_evaluacion,
-        miembro_id = miembro.id
+        miembro_id = miembro.id,
+        entrenador_id = data.entrenador_id
     )
     session.add(evaluacion)
     session.commit()
     session.refresh(evaluacion)
-    return {"message":"Evaluación física registrada de forma exitosa", "detail":evaluacion}
+    return {"message":"Evaluacion fisica registrada de forma exitosa", "detail":evaluacion}
 
 @router.get("/", response_model=list[EvaluacionFisica])
 def get_active_evaluaciones(session: Session = Depends(get_session)):
     evaluacion = session.exec(select(EvaluacionFisica).where(EvaluacionFisica.estado==True)).all()
     if not evaluacion:
-        raise HTTPException(status_code=404, detail="No existe ninguna evaluación física registrada")
+        raise HTTPException(status_code=404, detail="No existe ninguna evaluacion fisica registrada")
     return evaluacion
 
 @router.get("/all/", response_model=list[EvaluacionFisica])
@@ -73,93 +77,89 @@ def get_all_evaluaciones(session: Session = Depends(get_session)):
 
 @router.get("/filter/", response_model=list[EvaluacionFisica])
 def filter_evaluacion(
-    ci: Optional[int] = Query(default=None),
+    miembro_ci: Optional[int] = Query(default=None),
     fecha: Optional[date] = Query(default=None),
     limite: int = 10,
     session: Session = Depends(get_session)
 ):
-    if not ci and not fecha:
+    if not miembro_ci and not fecha:
         raise HTTPException(status_code=400, detail="Debe suministrar por lo menos uno de los campos para filtrar")
-    query = select(EvaluacionFisica)
-    if ci:
-        query = query.where(EvaluacionFisica.miembro_ci == ci)
+    query = select(EvaluacionFisica).where(EvaluacionFisica.estado == True)
+    if miembro_ci:
+        miembro = session.exec(select(Miembro).where(Miembro.ci == miembro_ci)).first()
+        if miembro:
+            query = query.where(EvaluacionFisica.miembro_id == miembro.id)
+        else:
+            return []
     if fecha:
         query = query.where(EvaluacionFisica.fecha_evaluacion == fecha)
-    query.limit(limite)
+    query = query.limit(limite)
     return session.exec(query).all()
 
-@router.patch("/update/{id}/")
-def patch_evaluacion(id: int, data: UpdateEvaluacionFisicaOptional, session: Session = Depends(get_session)):
-    if not id: 
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID de la evaluación")
-    evaluacion = session.get(EvaluacionFisica, id)
+@router.patch("/update/{evaluacion_id}/")
+def patch_evaluacion(evaluacion_id: int, data: UpdateEvaluacionFisicaOptional, session: Session = Depends(get_session)):
+    evaluacion = session.get(EvaluacionFisica, evaluacion_id)
     if not evaluacion:
-        raise HTTPException(status_code=404, detail="No se encuentra la evaluación solicitada")
-    if data.peso:
+        raise HTTPException(status_code=404, detail="No se encuentra la evaluacion solicitada")
+    if not evaluacion.estado:
+        raise HTTPException(status_code=400, detail="No se puede actualizar una evaluacion inactiva")
+    if data.peso is not None:
         evaluacion.peso = data.peso
         evaluacion.imc = calcular_imc(evaluacion.talla, data.peso)
         evaluacion.estado_imc = calcular_estado_imc(evaluacion.imc)
-    if data.talla:
+    if data.talla is not None:
         evaluacion.talla = data.talla
         evaluacion.imc = calcular_imc(data.talla, evaluacion.peso)
         evaluacion.estado_imc = calcular_estado_imc(evaluacion.imc)
-    if data.medidas:
+    if data.medidas is not None:
         evaluacion.medidas = data.medidas
-    if data.observaciones:
+    if data.observaciones is not None:
         evaluacion.observaciones = data.observaciones
-    if data.fecha_evaluacion:
+    if data.fecha_evaluacion is not None:
         evaluacion.fecha_evaluacion = data.fecha_evaluacion
-    if data.miembro_ci:
-        evaluacion.miembro_ci = data.miembro_ci
     session.commit()
     session.refresh(evaluacion)
-    return {"message":"Evaluación actualizada", "detail":evaluacion}
+    return {"message":"Evaluacion actualizada", "detail":evaluacion}
 
-@router.put("/update/{id}/")
-def put_evaluacion(id: int, data: UpdateEvaluacionFisica, session: Session = Depends(get_session)):
-    if not id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID de la evaluación a actualizar")
-    evaluacion = session.get(EvaluacionFisica, id)
+@router.put("/update/{evaluacion_id}/")
+def put_evaluacion(evaluacion_id: int, data: UpdateEvaluacionFisica, session: Session = Depends(get_session)):
+    evaluacion = session.get(EvaluacionFisica, evaluacion_id)
     if not evaluacion:
-        raise HTTPException(status_code=404, detail="No se encuentra una evaluación registrada con la ID suministrada")
+        raise HTTPException(status_code=404, detail="No se encuentra una evaluacion registrada con la ID suministrada")
+    if not evaluacion.estado:
+        raise HTTPException(status_code=400, detail="No se puede actualizar una evaluacion inactiva")
     evaluacion.peso = data.peso
     evaluacion.talla = data.talla
-    data.imc = calcular_imc(data.talla, data.peso)
-    evaluacion.imc = data.imc
-    data.estado_imc = calcular_estado_imc(data.imc)
-    evaluacion.estado_imc = data.estado_imc
+    imc = calcular_imc(data.talla, data.peso)
+    evaluacion.imc = imc
+    evaluacion.estado_imc = calcular_estado_imc(imc)
     evaluacion.medidas = data.medidas
     evaluacion.observaciones = data.observaciones
     evaluacion.fecha_evaluacion = data.fecha_evaluacion
-    evaluacion.miembro_ci = data.miembro_ci
     session.commit()
     session.refresh(evaluacion)
-    return {"message":"La evaluación ha sdio actualizada de forma exitosa", "detail":evaluacion}
+    return {"message":"La evaluacion ha sido actualizada de forma exitosa", "detail":evaluacion}
 
-@router.delete("/{id}/")
-def inactivate_evaluacion(id: int, session: Session = Depends(get_session)):
-    if not id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID de la evaluacion a inactivar")
-    evaluacion = session.get(EvaluacionFisica, id)
+@router.delete("/{evaluacion_id}/")
+def inactivate_evaluacion(evaluacion_id: int, session: Session = Depends(get_session)):
+    evaluacion = session.get(EvaluacionFisica, evaluacion_id)
     if not evaluacion:
         raise HTTPException(status_code=404, detail="No existe una evaluacion asociada a la ID suministrada")
     if not evaluacion.estado:
-        raise HTTPException(status_code=400, detail="La evaluación ya se encuentra inactiva")
+        raise HTTPException(status_code=400, detail="La evaluacion ya se encuentra inactiva")
     evaluacion.estado = False
     session.commit()
     session.refresh(evaluacion)
-    return {"message":f"Evaluación con la ID {evaluacion.id} inactivada de forma exitosa", "detail":evaluacion}
+    return {"message":f"Evaluacion con la ID {evaluacion.id} inactivada de forma exitosa", "detail":evaluacion}
 
-@router.patch("/{id}/")
-def activate_evaluacion(id: int, session: Session = Depends(get_session)):
-    if not id:
-        raise HTTPException(status_code=400, detail="Debe suministrar la ID de la evaluacion a activar")
-    evaluacion = session.get(EvaluacionFisica, id)
+@router.patch("/{evaluacion_id}/")
+def activate_evaluacion(evaluacion_id: int, session: Session = Depends(get_session)):
+    evaluacion = session.get(EvaluacionFisica, evaluacion_id)
     if not evaluacion:
         raise HTTPException(status_code=404, detail="No existe una evaluacion asociada a la ID suministrada")
     if evaluacion.estado:
-        raise HTTPException(status_code=400, detail="La evaluación ya se encuentra activa")
+        raise HTTPException(status_code=400, detail="La evaluacion ya se encuentra activa")
     evaluacion.estado = True
     session.commit()
     session.refresh(evaluacion)
-    return {"message":f"Evaluación con la ID {evaluacion.id} activada de forma exitosa", "detail":evaluacion}
+    return {"message":f"Evaluacion con la ID {evaluacion.id} activada de forma exitosa", "detail":evaluacion}
