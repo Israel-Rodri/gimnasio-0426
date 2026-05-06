@@ -33,9 +33,13 @@ def create_evaluacion(data: CreateEvaluacionFisica, session: Session = Depends(g
     ).first()
     if not miembro or not miembro.estado:
         raise HTTPException(status_code=400, detail=f"El miembro con la cedula {data.miembro_ci} no se encuentra registrado o no se encuentra activo")
-    entrenador = session.get(Entrenador, data.entrenador_id)
+    entrenador = session.exec(
+        select(Entrenador).where(
+            Entrenador.ci == data.entrenador_ci
+        )
+    ).first()
     if not entrenador or not entrenador.estado:
-        raise HTTPException(status_code=400, detail=f"El entrenador con la ID {data.entrenador_id} no se encuentra registrado o no se encuentra activo")
+        raise HTTPException(status_code=400, detail=f"El entrenador con la ID {data.entrenador_ci} no se encuentra registrado o no se encuentra activo")
     existing = session.exec(
         select(EvaluacionFisica).where(
             EvaluacionFisica.fecha_evaluacion == data.fecha_evaluacion,
@@ -55,7 +59,7 @@ def create_evaluacion(data: CreateEvaluacionFisica, session: Session = Depends(g
         observaciones = data.observaciones,
         fecha_evaluacion = data.fecha_evaluacion,
         miembro_id = miembro.id,
-        entrenador_id = data.entrenador_id
+        entrenador_id = entrenador.id
     )
     session.add(evaluacion)
     session.commit()

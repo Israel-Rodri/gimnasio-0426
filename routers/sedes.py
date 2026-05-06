@@ -31,7 +31,7 @@ def create_sede(data: CreateSede, session: Session = Depends(get_session)):
     session.refresh(sede)
     return {"message":f"Sede {sede.nombre} creada exitosamente", "detail":sede}
 
-@router.get("/all/", response_model=list[SedeResponse])
+@router.get("/all/", response_model=list[Sede])
 def get_all_sede(session: Session = Depends(get_session)):
     sede = session.exec(select(Sede)).all()
     if not sede:
@@ -102,13 +102,14 @@ def put_sede(sede_id: int, data: UpdateSede, session: Session = Depends(get_sess
         raise HTTPException(status_code=404, detail="No existe una sede con la id proporcionada")
     if not sede.estado:
         raise HTTPException(status_code=400, detail="No se puede actualizar una sede inactiva")
+    nombre = sede.nombre
     sede.nombre = data.nombre
     sede.direccion = data.direccion
     sede.telefono = data.telefono
     sede.horario = data.horario
     session.commit()
     session.refresh(sede)
-    return {"message":f"Sede {sede.nombre} actualizada de forma exitosa", "detail":sede}
+    return {"message":f"Sede {nombre} actualizada de forma exitosa", "detail":sede}
 
 @router.patch("/update/{sede_id}/", response_model=MessageResponse[SedeResponse])
 def patch_sede(sede_id: int, data: UpdateSedeOptional, session: Session = Depends(get_session)):

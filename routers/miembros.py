@@ -174,7 +174,7 @@ def asociar_entrenador_a_miembro(miembro_ci: int, entrenador_ci: int, session: S
         raise HTTPException(status_code=400, detail=f"Ya existe una relacion entre el miembro {miembro.nombre} y el entrenador {entrenador.nombre}")
     miembro.entrenadores.append(entrenador)
     session.commit()
-    return {"message":f"Entrenador {entrenador.nombre} asociado de forma exitosa al miembro {miembro.nombre}"}
+    return {"message":f"Entrenador {entrenador.nombre} {entrenador.apellido} asociado de forma exitosa al miembro {miembro.nombre} {miembro.apellido}"}
 
 @router.get("/{miembro_ci}/entrenadores/", response_model=list[EntrenadorResponse])
 def get_entrenadores_miembro(miembro_ci: int, session: Session = Depends(get_session)):
