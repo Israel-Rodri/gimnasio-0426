@@ -51,7 +51,7 @@ def create_miembro(data: CreateMiembro, session: Session = Depends(get_session))
     session.refresh(miembro)
     return {"message":f"Miembro {miembro.nombre} {miembro.apellido} creado de forma exitosa", "detail":miembro}
 
-@router.get("/all/", response_model=list[MiembroResponse])
+@router.get("/all/", response_model=list[Miembro])
 def get_all_miembro(session: Session = Depends(get_session)):
     miembro = session.exec(select(Miembro)).all()
     if not miembro:

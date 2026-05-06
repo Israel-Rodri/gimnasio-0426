@@ -73,7 +73,7 @@ def get_active_evaluaciones(session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="No existe ninguna evaluacion fisica registrada")
     return evaluacion
 
-@router.get("/all/", response_model=list[EvaluacionFisicaResponse])
+@router.get("/all/", response_model=list[EvaluacionFisica])
 def get_all_evaluaciones(session: Session = Depends(get_session)):
     evaluacion = session.exec(select(EvaluacionFisica)).all()
     if not evaluacion:

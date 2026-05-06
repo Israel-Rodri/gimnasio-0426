@@ -58,7 +58,7 @@ def get_active_pagos(session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="No existen pagos registrados o activos")
     return pagos
 
-@router.get("/all/", response_model=list[PagoResponse])
+@router.get("/all/", response_model=list[Pago])
 def get_all_pagos(session: Session = Depends(get_session)):
     pagos = session.exec(select(Pago)).all()
     if not pagos:

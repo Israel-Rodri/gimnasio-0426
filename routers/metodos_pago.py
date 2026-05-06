@@ -23,7 +23,7 @@ def create_metodo_pago(data: CreateMetodoPago, session: Session = Depends(get_se
     session.refresh(metodo_pago)
     return {"message":f"El metodo de pago {metodo_pago.nombre} ha sido creado de forma exitosa", "detail":metodo_pago}
 
-@router.get("/all/", response_model=list[MetodoPagoResponse])
+@router.get("/all/", response_model=list[MetodoPago])
 def get_all_metodos_pago(session: Session = Depends(get_session)):
     metodo_pago = session.exec(select(MetodoPago)).all()
     if not metodo_pago:

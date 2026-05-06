@@ -39,7 +39,7 @@ def create_entrenador(data: CreateEntrenador, session: Session = Depends(get_ses
     session.refresh(entrenador)
     return {"message":f"Entrenador {entrenador.nombre} {entrenador.apellido} creado de forma exitosa", "detail":entrenador}
 
-@router.get("/all/", response_model=list[EntrenadorResponse])
+@router.get("/all/", response_model=list[Entrenador])
 def get_entrenador(session: Session = Depends(get_session)):
     entrenador = session.exec(select(Entrenador)).all()
     if not entrenador:

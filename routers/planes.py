@@ -43,7 +43,7 @@ def create_plan(data: CreatePlan, session: Session = Depends(get_session)):
     session.refresh(plan)
     return {"message":f"Plan {plan.nombre} creado de forma exitosa", "detail":plan}
 
-@router.get("/all/", response_model=list[PlanResponse])
+@router.get("/all/", response_model=list[Plan])
 def get_all_plan(session: Session = Depends(get_session)):
     plan = session.exec(select(Plan)).all()
     if not plan:

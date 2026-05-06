@@ -31,7 +31,7 @@ def create_rutina(data: CreateRutina, session: Session = Depends(get_session)):
     session.refresh(rutina)
     return {"message":f"Rutina {rutina.nombre} creada de forma exitosa", "detail":rutina}
 
-@router.get("/all/", response_model=list[RutinaResponse])
+@router.get("/all/", response_model=list[Rutina])
 def get_all_rutina(session: Session = Depends(get_session)):
     rutina = session.exec(select(Rutina)).all()
     if not rutina:
