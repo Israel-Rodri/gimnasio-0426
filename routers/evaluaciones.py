@@ -101,6 +101,13 @@ def filter_evaluacion(
     query = query.limit(limite)
     return session.exec(query).all()
 
+@router.get("/{evaluacion_id}/", response_model=MessageResponse[EvaluacionFisicaResponse])
+def get_evaluacion_by_id(evaluacion_id: int, session: Session = Depends(get_session)):
+    evaluacion = session.get(EvaluacionFisica, evaluacion_id)
+    if not evaluacion:
+        raise HTTPException(status_code=404, detail=f"No se encuentra una evaluacion registrada con la ID {evaluacion_id}")
+    return {"message":"Evaluacion encontrada de forma exitosa", "detail":evaluacion}
+
 @router.patch("/update/{evaluacion_id}/", response_model=MessageResponse[EvaluacionFisicaResponse])
 def patch_evaluacion(evaluacion_id: int, data: UpdateEvaluacionFisicaOptional, session: Session = Depends(get_session)):
     evaluacion = session.get(EvaluacionFisica, evaluacion_id)

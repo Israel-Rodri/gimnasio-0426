@@ -133,6 +133,43 @@ def get_by_metodo(pago_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="No existen metodos de pago asociados al pago")
     return metodo
 
+@router.put("/update/{pago_id}/", response_model=MessageResponse[PagoResponse])
+def put_pago(pago_id: int, data: UpdatePago, session: Session = Depends(get_session)):
+    pago = session.get(Pago, pago_id)
+    if not pago:
+        raise HTTPException(status_code=404, detail=f"No se encuentra un pago registrado con la ID {pago_id}")
+    if not pago.estado:
+        raise HTTPException(status_code=400, detail=f"No se puede actualizar un pago inactivo")
+    pago.mensualidades = data.mensualidades
+    pago.fecha = data.fecha
+    pago.monto = data.monto
+    pago.referencia = data.referencia
+    pago.metodo_id = data.metodo_id
+    session.commit()
+    session.refresh(pago)
+    return {"message":f"El pago con referencia {pago.referencia} ha sido actualizado de forma exitosa", "detail":pago}
+
+@router.patch("/update/{pago_id}/", response_model=MessageResponse[PagoResponse])
+def patch_pago(pago_id: int, data: UpdatePagoOptional, session: Session = Depends(get_session)):
+    pago = session.get(Pago, pago_id)
+    if not pago:
+        raise HTTPException(status_code=404, detail=f"No se encuentra un pago registrado con la ID {pago_id}")
+    if not pago.estado:
+        raise HTTPException(status_code=400, detail=f"No se puede actualizar un pago inactivo")
+    if data.mensualidades is not None:
+        pago.mensualidades = data.mensualidades
+    if data.fecha is not None:
+        pago.fecha = data.fecha
+    if data.monto is not None:
+        pago.monto = data.monto
+    if data.referencia is not None:
+        pago.referencia = data.referencia
+    if data.metodo_id is not None:
+        pago.metodo_id = data.metodo_id
+    session.commit()
+    session.refresh(pago)
+    return {"message":f"El pago con referencia {pago.referencia} ha sido actualizado de forma exitosa", "detail":pago}
+
 @router.delete("/{pago_id}/", response_model=MessageResponse[PagoResponse])
 def inactivate_pago(pago_id: int, session: Session = Depends(get_session)):
     pago = session.get(Pago, pago_id)
