@@ -1,7 +1,7 @@
 # 📘 Documentación Técnica de los models del proyecto
 > Generado automáticamente mediante script Bash
 
-📅 Fecha: 2026-05-07 17:59:32
+📅 Fecha: 2026-05-07 17:58:52
 ---
 
 ## Modelo de Entrenadores

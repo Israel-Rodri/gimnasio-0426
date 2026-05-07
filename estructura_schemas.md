@@ -1,33 +1,17 @@
-# Estructura general del directorio schemas
+# 📘 Documentación Técnica de los models del proyecto
+> Generado automáticamente mediante script Bash
 
-**El directorio schemas se encarga de almacenar todos los archivos relacionados con la autenticacion y el retorno de datos mediante pydantic**
-
+📅 Fecha: 2026-05-07 18:01:16
 ---
 
-## `base.py`
+## Modelo de Entrenadores
 
-```
-from pydantic import BaseModel
-from typing import Generic, TypeVar
-
-T = TypeVar("T")
-
-class MessageResponse(BaseModel, Generic[T]):
-    message: str
-    detail: T
-```
-
----
-
-## `entrenadores.py`
-
-```
 from sqlmodel import SQLModel, Field
 from typing import Optional, List
 from pydantic import EmailStr
 
 class CreateEntrenador(SQLModel):
-    ci: int
+    ci: str
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     especialidad: Optional[str] = Field(default=None, max_length=100)
@@ -38,7 +22,7 @@ class CreateEntrenador(SQLModel):
     sede_id: int
 
 class UpdateEntrenador(SQLModel):
-    ci: int
+    ci: str
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     especialidad: Optional[str] = Field(default=None, max_length=100)
@@ -48,7 +32,7 @@ class UpdateEntrenador(SQLModel):
     sede_id: int
 
 class UpdateEntrenadorOptional(SQLModel):
-    ci: Optional[int] = Field(default=None)
+    ci: Optional[str] = Field(default=None)
     nombre: Optional[str] = Field(default=None, max_length=50)
     apellido: Optional[str] = Field(default=None, max_length=50)
     especialidad: Optional[str] = Field(default=None, max_length=100)
@@ -59,7 +43,7 @@ class UpdateEntrenadorOptional(SQLModel):
 
 class EntrenadorResponse(SQLModel):
     id: int
-    ci: int
+    ci: str
     nombre: str
     apellido: str
     especialidad: Optional[str] = None
@@ -67,13 +51,11 @@ class EntrenadorResponse(SQLModel):
     telefono: Optional[str] = None
     email: Optional[EmailStr] = None
     sede_id: int
-```
 
 ---
 
-## `evaluaciones.py`
+## Modelo de Evaluaciones
 
-```
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import date
@@ -84,8 +66,8 @@ class CreateEvaluacionFisica(SQLModel):
     medidas: Optional[dict] = Field(default=None)
     observaciones: Optional[str] = Field(default=None, max_length=200)
     fecha_evaluacion: date = Field(default_factory=date.today)
-    miembro_ci: int
-    entrenador_ci: int
+    miembro_id: int
+    entrenador_id: int
 
 class UpdateEvaluacionFisica(SQLModel):
     peso: float = Field(gt=0)
@@ -112,13 +94,11 @@ class EvaluacionFisicaResponse(SQLModel):
     fecha_evaluacion: date
     miembro_id: int
     entrenador_id: int
-```
 
 ---
 
-## `metodos_pago.py`
+## Modelo de Metodos de Pago
 
-```
 from sqlmodel import SQLModel, Field
 
 class CreateMetodoPago(SQLModel):
@@ -131,20 +111,17 @@ class UpdateMetodoPago(SQLModel):
 class MetodoPagoResponse(SQLModel):
     id: int
     nombre: str
-```
-
 ---
 
-## `miembros.py`
+## Modelo Miembros Entrenadores Link
 
-```
 from sqlmodel import SQLModel, Field
 from pydantic import EmailStr
 from typing import Optional
 from datetime import date
 
 class CreateMiembro(SQLModel):
-    ci: int
+    ci: str
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     fecha_nac: date
@@ -152,11 +129,11 @@ class CreateMiembro(SQLModel):
     email: Optional[EmailStr] = Field(default=None, max_length=255)
     fecha_inscripcion: date = Field(default_factory=date.today)
     estado: bool = Field(default=True)
-    entrenador_ci: Optional[int] = Field(default=None)
+    entrenador_id: Optional[int] = Field(default=None)
     sede_id: int
 
 class UpdateMiembro(SQLModel):
-    ci: int
+    ci: str
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     fecha_nac: date
@@ -166,7 +143,7 @@ class UpdateMiembro(SQLModel):
     sede_id: int
 
 class UpdateMiembroOptional(SQLModel):
-    ci: Optional[int] = Field(default=None)
+    ci: Optional[str] = Field(default=None)
     nombre: Optional[str] = Field(default=None, max_length=50)
     apellido: Optional[str] = Field(default=None, max_length=50)
     fecha_nac: Optional[date] = Field(default=None)
@@ -177,7 +154,7 @@ class UpdateMiembroOptional(SQLModel):
 
 class MiembroResponse(SQLModel):
     id: int
-    ci: int
+    ci: str
     nombre: str
     apellido: str
     fecha_nac: date
@@ -186,13 +163,11 @@ class MiembroResponse(SQLModel):
     fecha_inscripcion: date
     entrenador_id: Optional[int] = None
     sede_id: int
-```
 
 ---
 
-## `pagos.py`
+## Modelo Miembros
 
-```
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import date
@@ -203,7 +178,7 @@ class CreatePago(SQLModel):
     monto: float = Field(gt=0)
     referencia: str = Field(max_length=100)
     estado: bool = Field(default=True)
-    miembro_ci: int
+    miembro_id: int
     metodo_id: int
 
 class UpdatePago(SQLModel):
@@ -228,13 +203,11 @@ class PagoResponse(SQLModel):
     referencia: str
     miembro_id: int
     metodo_id: int
-```
 
 ---
 
-## `planes.py`
+## Modelo Pagos Planes Link
 
-```
 from sqlmodel import SQLModel, Field
 from typing import Optional, List
 
@@ -244,7 +217,7 @@ class CreatePlan(SQLModel):
     precio: float = Field(gt=0)
     beneficios: List[str] = Field(default_factory=list)
     estado: bool = Field(default=True)
-    miembro_ci: int
+    miembro_id: int
 
 class UpdatePlan(SQLModel):
     nombre: str = Field(max_length=50)
@@ -265,11 +238,11 @@ class PlanResponse(SQLModel):
     precio: float
     beneficios: List[str] = []
     miembro_id: int
-```
 
-## `rutinas.py`
+---
 
-```
+## Modelo Pagos
+
 from sqlmodel import SQLModel, Field
 from typing import Optional
 
@@ -302,13 +275,11 @@ class RutinaResponse(SQLModel):
     nivel: Optional[str] = None
     descripcion: Optional[str] = None
     duracion_estimada: Optional[float] = None
-```
 
 ---
 
-## `sedes.py`
+## Modelo Planes
 
-```
 from sqlmodel import SQLModel, Field
 from typing import Optional, Dict
 
@@ -337,4 +308,8 @@ class SedeResponse(SQLModel):
     direccion: str
     telefono: str
     horario: Optional[Dict] = None
-```
+
+---
+
+🤖 *Documento generado automáticamente. Revisa los contenidos antes de compartir.*
+📂 Repositorio: gimnasio-0426

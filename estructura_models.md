@@ -1,16 +1,11 @@
-# Estructura general del directorio Models
+# 📘 Documentación Técnica de los models del proyecto
+> Generado automáticamente mediante script Bash
 
-**El directorio models se encarga de almacenar los archivos encargados de la creacion de tablas en la base de datos PSQL**
-
-## `__init__.py`
-
-**Este archivo no contiene nada, solo se utiliza para importaciones relativas**
-
+📅 Fecha: 2026-05-07 17:59:56
 ---
 
-## `entrenadores.py`
+## Modelo de Entrenadores
 
-```
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import EmailStr
 from typing import Optional, List, TYPE_CHECKING
@@ -25,7 +20,7 @@ if TYPE_CHECKING:
 class Entrenador(SQLModel, table=True):
     __tablename__ = "entrenadores"
     id: int | None = Field(default=None, primary_key=True, sa_column_kwargs={"autoincrement":True})
-    ci: int = Field(max_length=20)
+    ci: str = Field(max_length=20)
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     especialidad: Optional[str] = Field(default=None, max_length=100)
@@ -39,12 +34,10 @@ class Entrenador(SQLModel, table=True):
     sede: Optional["Sede"] = Relationship(back_populates="entrenadores")
     miembros: list["Miembro"] = Relationship(back_populates="entrenadores", link_model=MiembrosEntrenadoresLink)
     evaluaciones: list["EvaluacionFisica"] = Relationship(back_populates="entrenador")
-```
 ---
 
-## `evaluaciones.py`
+## Modelo de Evaluaciones
 
-```
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, TYPE_CHECKING
 from datetime import date
@@ -71,13 +64,10 @@ class EvaluacionFisica(SQLModel, table=True):
     #Relaciones
     miembro: Optional["Miembro"] = Relationship(back_populates="evaluaciones")
     entrenador: Optional["Entrenador"] = Relationship(back_populates="evaluaciones")
-```
-
 ---
 
-## `metodos_pago.py`
+## Modelo de Metodos de Pago
 
-```
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, TYPE_CHECKING
 
@@ -91,26 +81,20 @@ class MetodoPago(SQLModel, table=True):
     estado: bool = Field(default=True)
     #Relaciones
     pagos: list["Pago"] = Relationship(back_populates="metodo_pago")
-```
-
 ---
 
-## `miembros_entrenadores_link.py`
+## Modelo Miembros Entrenadores Link
 
-```
 from sqlmodel import SQLModel, Field
 
 class MiembrosEntrenadoresLink(SQLModel, table=True):
     __tablename__ = "miembros_entrenadores_link"
     miembro_id: int | None = Field(default=None, foreign_key="miembros.id", primary_key=True)
     entrenador_id: int | None = Field(default=None, foreign_key="entrenadores.id", primary_key=True)
-```
-
 ---
 
-## `miembros.py`
+## Modelo Miembros
 
-```
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import EmailStr
 from typing import Optional, TYPE_CHECKING
@@ -127,7 +111,7 @@ if TYPE_CHECKING:
 class Miembro(SQLModel, table=True):
     __tablename__ = "miembros"
     id: int | None = Field(default=None, primary_key=True, sa_column_kwargs={"autoincrement":True})
-    ci: int = Field(max_length=20)
+    ci: str = Field(max_length=20)
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     fecha_nac: date
@@ -138,32 +122,27 @@ class Miembro(SQLModel, table=True):
     entrenador_id: Optional[int] = Field(default=None, foreign_key="entrenadores.id", index=True)
     #Foreign keys
     sede_id: int = Field(foreign_key="sedes.id")
+    plan_id: int = Field(foreign_key="planes.id")
     #Relaciones
     sede: Optional["Sede"] = Relationship(back_populates="miembros")
+    planes: Optional["Plan"] = Relationship(back_populates="miembros")
     evaluaciones: list["EvaluacionFisica"] = Relationship(back_populates="miembro")
-    planes: list["Plan"] = Relationship(back_populates="miembro")
     pagos: list["Pago"] = Relationship(back_populates="miembro")
     entrenadores: list["Entrenador"] = Relationship(back_populates="miembros", link_model=MiembrosEntrenadoresLink)
-```
-
 ---
 
-## `pagos_planes_link.py`
+## Modelo Pagos Planes Link
 
-```
 from sqlmodel import SQLModel, Field
 
 class PagosPlanesLink(SQLModel, table=True):
     __tablename__ = "pagos_planes_link"
     pago_id: int | None = Field(default=None, foreign_key="pagos.id", primary_key=True)
     plan_id: int | None = Field(default=None, foreign_key="planes.id", primary_key=True)
-```
-
 ---
 
-## `pagos.py`
+## Modelo Pagos
 
-```
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, TYPE_CHECKING
 from datetime import date
@@ -189,13 +168,10 @@ class Pago(SQLModel, table=True):
     miembro: Optional["Miembro"] = Relationship(back_populates="pagos")
     metodo_pago: Optional["MetodoPago"] = Relationship(back_populates="pagos")
     planes: list["Plan"] = Relationship(back_populates="pagos", link_model=PagosPlanesLink)
-```
-
 ---
 
-## `planes.py`
+## Modelo Planes
 
-```
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import Column, ARRAY, String
@@ -215,32 +191,24 @@ class Plan(SQLModel, table=True):
     precio: float = Field(gt=0)
     beneficios: List[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     estado: bool = Field(default=True)
-    #Foreign Keys
-    miembro_id: int = Field(foreign_key="miembros.id")
     #Relaciones
-    miembro: Optional["Miembro"] = Relationship(back_populates="planes")
+    miembros: list["Miembro"] = Relationship(back_populates="planes")
     pagos: list["Pago"] = Relationship(back_populates="planes", link_model=PagosPlanesLink)
     rutinas: list["Rutina"] = Relationship(back_populates="planes", link_model=RutinasPlanesLink)
-```
-
 ---
 
-## `rutinas_planes_link.py`
+## Modelo Rutinas Planes Link
 
-```
 from sqlmodel import SQLModel, Field
 
 class RutinasPlanesLink(SQLModel, table=True):
     __tablename__ = "rutinas_planes_link"
     rutina_id: int | None = Field(default=None, foreign_key="rutinas.id", primary_key=True)
     plan_id: int | None = Field(default=None, foreign_key="planes.id", primary_key=True)
-```
-
 ---
 
-## `rutinas.py`
+## Modelo Rutinas
 
-```
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, TYPE_CHECKING
 from .rutinas_planes_link import RutinasPlanesLink
@@ -259,13 +227,10 @@ class Rutina(SQLModel, table=True):
     estado: bool = Field(default=True)
     #Relaciones
     planes: list["Plan"] = Relationship(back_populates="rutinas", link_model=RutinasPlanesLink)
-```
-
 ---
 
-## `sedes.py`
+## Modelo Sedes
 
-```
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, Dict, TYPE_CHECKING
 from sqlalchemy.dialects.postgresql import JSONB
@@ -285,4 +250,7 @@ class Sede(SQLModel, table=True):
     #Relaciones
     miembros: list["Miembro"] = Relationship(back_populates="sede")
     entrenadores: list["Entrenador"] = Relationship(back_populates="sede")
-```
+---
+
+🤖 *Documento generado automáticamente. Revisa los contenidos antes de compartir.*
+📂 Repositorio: gimnasio-0426

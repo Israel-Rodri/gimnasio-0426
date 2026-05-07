@@ -1,24 +1,11 @@
-# Estructura general de la raiz del proyecto
+# 📘 Documentación Técnica de los models del proyecto
+> Generado automáticamente mediante script Bash
 
-**La raiz del proyecto almacena archivos generales, usualmente accedidos por la gran mayoria de archivos del proyecto**
-
+📅 Fecha: 2026-05-07 18:11:04
 ---
 
-## `___init__.py`
+## Modelo de Entrenadores
 
-**Este archivo se encuentra vacio, solo existe para permitir las importaciones relativas**
-
----
-
-## `.env`
-
-**Archivo que almacena los datos de conexion a la base de datos en una variable DATABASE_URL**
-
----
-
-## `database.py`
-
-```
 from sqlmodel import create_engine, Session
 from dotenv import load_dotenv
 import os
@@ -32,13 +19,10 @@ engine = create_engine(DATABASE_URL, echo=True)
 def get_session():
     with Session(engine) as session:
         yield session
-```
-
 ---
 
-## `main.py`
+## Modelo de Evaluaciones
 
-```
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from database import engine
@@ -63,4 +47,8 @@ app.include_router(pagos.router)
 @app.get("/")
 def root():
     return {"message":"Bienvenido al inicio!"}
-```
+
+---
+
+🤖 *Documento generado automáticamente. Revisa los contenidos antes de compartir.*
+📂 Repositorio: gimnasio-0426
