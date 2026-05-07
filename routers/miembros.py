@@ -28,12 +28,10 @@ def create_miembro(data: CreateMiembro, session: Session = Depends(get_session))
     sede = session.get(Sede, data.sede_id)
     if not sede:
         raise HTTPException(status_code=404, detail=f"La sede con la ID {data.sede_id} no se encuentra registrada")
-    entrenador_id = None
-    if data.entrenador_ci is not None:
-        entrenador = session.exec(select(Entrenador).where(Entrenador.ci == data.entrenador_ci)).first()
+    if data.entrenador_id is not None:
+        entrenador = session.get(Entrenador, data.entrenador_id)
         if not entrenador:
-            raise HTTPException(status_code=404, detail=f"No existe un entrenador con la cedula {data.entrenador_ci}")
-        entrenador_id = entrenador.id
+            raise HTTPException(status_code=404, detail=f"No existe un entrenador con la ID {data.entrenador_id}")
     miembro = Miembro(
         ci = data.ci,
         nombre = data.nombre,
@@ -43,7 +41,7 @@ def create_miembro(data: CreateMiembro, session: Session = Depends(get_session))
         email = data.email,
         fecha_inscripcion = data.fecha_inscripcion,
         estado = data.estado,
-        entrenador_id = entrenador_id,
+        entrenador_id = data.entrenador_id,
         sede_id = data.sede_id
     )
     session.add(miembro)
@@ -101,26 +99,18 @@ def filter_miembro(
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.get("/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
-def get_miembro_by_ci(miembro_ci: int, session: Session = Depends(get_session)):
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == miembro_ci
-        )
-    ).first()
+@router.get("/{miembro_id}/", response_model=MessageResponse[MiembroResponse])
+def get_miembro_by_id(miembro_id: int, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail="No se encuentra un miembro asociado a la cedula ingresada")
+        raise HTTPException(status_code=404, detail=f"No se encuentra un miembro asociado a la ID {miembro_id}")
     return {"message": f"Miembro {miembro.nombre} {miembro.apellido} encontrado de forma exitosa", "detail": miembro}
 
-@router.get("/{miembro_ci}/evaluaciones/", response_model=MessageResponse[list[EvaluacionFisicaResponse]])
-def get_evaluaciones_miembro(miembro_ci: int, session: Session = Depends(get_session)):
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == miembro_ci
-        )
-    ).first()
+@router.get("/{miembro_id}/evaluaciones/", response_model=MessageResponse[list[EvaluacionFisicaResponse]])
+def get_evaluaciones_miembro(miembro_id: int, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"El miembro con la cedula {miembro_ci} no se encuentra registrado")
+        raise HTTPException(status_code=404, detail=f"El miembro con la ID {miembro_id} no se encuentra registrado")
     if not miembro.estado:
         raise HTTPException(status_code=400, detail="El miembro seleccionado no se encuentra activo")
     evaluaciones = miembro.evaluaciones
@@ -128,15 +118,11 @@ def get_evaluaciones_miembro(miembro_ci: int, session: Session = Depends(get_ses
         raise HTTPException(status_code=404, detail=f"El miembro {miembro.nombre} {miembro.apellido} no tiene evaluaciones relacionadas")
     return {"message":f"Evaluaciones del miembro {miembro.nombre} {miembro.apellido}:", "detail":evaluaciones}
 
-@router.get("/{miembro_ci}/planes/", response_model=MessageResponse[list[PlanResponse]])
-def get_planes_miembro(miembro_ci: int, session: Session = Depends(get_session)):
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == miembro_ci
-        )
-    ).first()
+@router.get("/{miembro_id}/planes/", response_model=MessageResponse[list[PlanResponse]])
+def get_planes_miembro(miembro_id: int, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"El miembro con la cedula {miembro_ci} no se encuentra registrado")
+        raise HTTPException(status_code=404, detail=f"El miembro con la ID {miembro_id} no se encuentra registrado")
     if not miembro.estado:
         raise HTTPException(status_code=400, detail="El miembro seleccionado no se encuentra activo")
     planes = miembro.planes
@@ -144,15 +130,11 @@ def get_planes_miembro(miembro_ci: int, session: Session = Depends(get_session))
         raise HTTPException(status_code=404, detail=f"El miembro {miembro.nombre} {miembro.apellido} no tiene planes relacionados")
     return {"message":f"Planes del miembro {miembro.nombre} {miembro.apellido}:", "detail":planes}
 
-@router.get("/{miembro_ci}/pagos/", response_model=MessageResponse[list[PagoResponse]])
-def get_pagos_miembro(miembro_ci: int, session: Session = Depends(get_session)):
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == miembro_ci
-        )
-    ).first()
+@router.get("/{miembro_id}/pagos/", response_model=MessageResponse[list[PagoResponse]])
+def get_pagos_miembro(miembro_id: int, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"El miembro con la cedula {miembro_ci} no se encuentra registrado")
+        raise HTTPException(status_code=404, detail=f"El miembro con la ID {miembro_id} no se encuentra registrado")
     if not miembro.estado:
         raise HTTPException(status_code=400, detail="El miembro seleccionado no se encuentra activo")
     pagos = miembro.pagos
@@ -160,42 +142,39 @@ def get_pagos_miembro(miembro_ci: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail=f"El miembro {miembro.nombre} {miembro.apellido} no tiene pagos relacionados")
     return {"message":f"Pagos del miembro {miembro.nombre} {miembro.apellido}:", "detail":pagos}
 
-@router.post("/{miembro_ci}/entrenadores/{entrenador_ci}/")
-def asociar_entrenador_a_miembro(miembro_ci: int, entrenador_ci: int, session: Session = Depends(get_session)):
-    miembro = session.exec(select(Miembro).where(Miembro.ci == miembro_ci)).first()
+@router.post("/{miembro_id}/entrenadores/{entrenador_id}/")
+def asociar_entrenador_a_miembro(miembro_id: int, entrenador_id: int, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"No existe un miembro con la cedula {miembro_ci}")
+        raise HTTPException(status_code=404, detail=f"No existe un miembro con la ID {miembro_id}")
     if not miembro.estado:
         raise HTTPException(status_code=400, detail=f"El miembro {miembro.nombre} no se encuentra activo")
-    entrenador = session.exec(select(Entrenador).where(Entrenador.ci == entrenador_ci)).first()
+    entrenador = session.get(Entrenador, entrenador_id)
     if not entrenador:
-        raise HTTPException(status_code=404, detail=f"No existe un entrenador con la cedula {entrenador_ci}")
+        raise HTTPException(status_code=404, detail=f"No existe un entrenador con la ID {entrenador_id}")
     if entrenador in miembro.entrenadores:
         raise HTTPException(status_code=400, detail=f"Ya existe una relacion entre el miembro {miembro.nombre} y el entrenador {entrenador.nombre}")
     miembro.entrenadores.append(entrenador)
     session.commit()
     return {"message":f"Entrenador {entrenador.nombre} {entrenador.apellido} asociado de forma exitosa al miembro {miembro.nombre} {miembro.apellido}"}
 
-@router.get("/{miembro_ci}/entrenadores/", response_model=list[EntrenadorResponse])
-def get_entrenadores_miembro(miembro_ci: int, session: Session = Depends(get_session)):
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == miembro_ci
-        )
-    ).first()
+@router.get("/{miembro_id}/entrenadores/", response_model=MessageResponse[list[EntrenadorResponse]])
+def get_entrenadores_miembro(miembro_id: int, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"No existe un miembro con la cedula {miembro_ci}")
-    return miembro.entrenadores
+        raise HTTPException(status_code=404, detail=f"No existe un miembro con la ID {miembro_id}")
+    if not miembro.estado:
+        raise HTTPException(status_code=400, detail=f"El miembro {miembro.nombre} no se encuentra activo, activelo para acceder a su informacion")
+    entrenadores = miembro.entrenadores
+    if not entrenadores:
+        raise HTTPException(status_code=404, detail=f"El miembro {miembro.nombre} {miembro.apellido} no tiene entrenadores asociados")
+    return {"message":f"Entrenadores asociados al miembro {miembro.nombre} {miembro.apellido}:", "detail":entrenadores}
 
-@router.patch("/update/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
-def patch_miembro(miembro_ci: int, data: UpdateMiembroOptional, session: Session = Depends(get_session)):
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == miembro_ci
-        )
-    ).first()
+@router.patch("/update/{miembro_id}/", response_model=MessageResponse[MiembroResponse])
+def patch_miembro(miembro_id: int, data: UpdateMiembroOptional, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"No se encuentra ningun miembro asociado a la cedula {miembro_ci}")
+        raise HTTPException(status_code=404, detail=f"No se encuentra ningun miembro asociado a la ID {miembro_id}")
     if not miembro.estado:
         raise HTTPException(status_code=400, detail=f"El miembro {miembro.nombre} se encuentra inactivo")
     nombre = miembro.nombre
@@ -219,15 +198,11 @@ def patch_miembro(miembro_ci: int, data: UpdateMiembroOptional, session: Session
     session.refresh(miembro)
     return {"message":f"El miembro {nombre} ha sido actualizado de forma exitosa", "detail":miembro}
 
-@router.put("/update/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
-def put_miembro(miembro_ci: int, data: UpdateMiembro, session: Session = Depends(get_session)):
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == miembro_ci
-        )
-    ).first()
+@router.put("/update/{miembro_id}/", response_model=MessageResponse[MiembroResponse])
+def put_miembro(miembro_id: int, data: UpdateMiembro, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"No se encuentra ningun miembro asociado a la cedula {miembro_ci}")
+        raise HTTPException(status_code=404, detail=f"No se encuentra ningun miembro asociado a la ID {miembro_id}")
     if not miembro.estado:
         raise HTTPException(status_code=400, detail=f"El miembro {miembro.nombre} se encuentra inactivo")
     nombre = miembro.nombre
@@ -243,11 +218,11 @@ def put_miembro(miembro_ci: int, data: UpdateMiembro, session: Session = Depends
     session.refresh(miembro)
     return {"message":f"El miembro {nombre} ha sido actualizado de forma exitosa", "detail":miembro}
 
-@router.delete("/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
-def inactivate_miembro(miembro_ci: int, session: Session = Depends(get_session)):
-    miembro = session.exec(select(Miembro).where(Miembro.ci == miembro_ci)).first()
+@router.delete("/{miembro_id}/", response_model=MessageResponse[MiembroResponse])
+def inactivate_miembro(miembro_id: int, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"No existe un miembro con la cedula {miembro_ci}")
+        raise HTTPException(status_code=404, detail=f"No existe un miembro con la ID {miembro_id}")
     if not miembro.estado:
         raise HTTPException(status_code=400, detail=f"El miembro {miembro.nombre} ya se encuentra inactivo")
     miembro.estado = False
@@ -255,11 +230,11 @@ def inactivate_miembro(miembro_ci: int, session: Session = Depends(get_session))
     session.refresh(miembro)
     return {"message":f"Miembro {miembro.nombre} inactivado de forma exitosa", "detail":miembro}
 
-@router.patch("/{miembro_ci}/", response_model=MessageResponse[MiembroResponse])
-def activate_miembro(miembro_ci: int, session: Session = Depends(get_session)):
-    miembro = session.exec(select(Miembro).where(Miembro.ci == miembro_ci)).first()
+@router.patch("/{miembro_id}/", response_model=MessageResponse[MiembroResponse])
+def activate_miembro(miembro_id: int, session: Session = Depends(get_session)):
+    miembro = session.get(Miembro, miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"No existe un miembro con la cedula {miembro_ci}")
+        raise HTTPException(status_code=404, detail=f"No existe un miembro con la ID {miembro_id}")
     if miembro.estado:
         raise HTTPException(status_code=400, detail=f"El miembro {miembro.nombre} ya se encuentra activo")
     miembro.estado = True

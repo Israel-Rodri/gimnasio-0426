@@ -37,7 +37,7 @@ def get_active_metodo_pago(session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="No existe ningun metodo de pago registrado o no hay ningun metodo de pago activo")
     return metodo_pago
 
-@router.get("/filter/", response_model=MessageResponse[list[MetodoPagoResponse]])
+@router.get("/filter/", response_model=list[MetodoPagoResponse])
 def filter_metodo_pago(
     nombre: Optional[str] = Query(default=None),
     limite: int = Query(default=10),
@@ -48,10 +48,7 @@ def filter_metodo_pago(
     query = select(MetodoPago).where(MetodoPago.estado == True)
     query = query.where(MetodoPago.nombre.ilike(f"%{nombre}%"))
     query = query.limit(limite)
-    metodo_pago = session.exec(query).all()
-    if not metodo_pago:
-        raise HTTPException(status_code=404, detail=f"No se encuentra un metodo de pago con el nombre '{nombre}'")
-    return {"message":"Metodo de pago encontrado", "detail":metodo_pago}
+    return session.exec(query).all()
 
 @router.get("/{metodo_id}/", response_model=MessageResponse[MetodoPagoResponse])
 def get_id_metodo_pago(metodo_id: int, session: Session = Depends(get_session)):

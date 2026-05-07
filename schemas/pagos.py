@@ -8,7 +8,7 @@ class CreatePago(SQLModel):
     monto: float = Field(gt=0)
     referencia: str = Field(max_length=100)
     estado: bool = Field(default=True)
-    miembro_ci: int
+    miembro_id: int
     metodo_id: int
 
 class UpdatePago(SQLModel):

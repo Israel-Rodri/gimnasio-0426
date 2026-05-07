@@ -23,13 +23,9 @@ def create_plan(data: CreatePlan, session: Session = Depends(get_session)):
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Ya existe un plan con los datos ingresados")
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == data.miembro_ci
-        )
-    ).first()
+    miembro = session.get(Miembro, data.miembro_id)
     if not miembro:
-        raise HTTPException(status_code=404, detail=f"El miembro con la cedula {data.miembro_ci} no se encuentra registrado")
+        raise HTTPException(status_code=404, detail=f"El miembro con la ID {data.miembro_id} no se encuentra registrado")
     plan = Plan(
         nombre = data.nombre,
         duracion = data.duracion,

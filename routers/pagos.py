@@ -23,13 +23,9 @@ def create_pago(data: CreatePago, session: Session = Depends(get_session)):
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Ya existe un pago con la referencia {data.referencia}")
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == data.miembro_ci
-        )
-    ).first()
+    miembro = session.get(Miembro, data.miembro_id)
     if not miembro or not miembro.estado:
-        raise HTTPException(status_code=404, detail=f"El miembro con la cedula {data.miembro_ci} no se encuentra registrado o no se encuentra activo")
+        raise HTTPException(status_code=404, detail=f"El miembro con la ID {data.miembro_id} no se encuentra registrado o no se encuentra activo")
     metodo = session.get(MetodoPago, data.metodo_id)
     if not metodo or not metodo.estado:
         raise HTTPException(status_code=404, detail=f"El metodo de pago con la ID {data.metodo_id} no se encuentra registrado o no se encuentra activo")

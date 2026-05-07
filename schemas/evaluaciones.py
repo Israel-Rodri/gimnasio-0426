@@ -8,8 +8,8 @@ class CreateEvaluacionFisica(SQLModel):
     medidas: Optional[dict] = Field(default=None)
     observaciones: Optional[str] = Field(default=None, max_length=200)
     fecha_evaluacion: date = Field(default_factory=date.today)
-    miembro_ci: int
-    entrenador_ci: int
+    miembro_id: int
+    entrenador_id: int
 
 class UpdateEvaluacionFisica(SQLModel):
     peso: float = Field(gt=0)

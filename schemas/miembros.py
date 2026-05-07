@@ -12,7 +12,7 @@ class CreateMiembro(SQLModel):
     email: Optional[EmailStr] = Field(default=None, max_length=255)
     fecha_inscripcion: date = Field(default_factory=date.today)
     estado: bool = Field(default=True)
-    entrenador_ci: Optional[int] = Field(default=None)
+    entrenador_id: Optional[int] = Field(default=None)
     sede_id: int
 
 class UpdateMiembro(SQLModel):

@@ -79,31 +79,30 @@ def filter_entrenador(
     query = query.limit(limite)
     return session.exec(query).all()
 
-@router.get("/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
-def get_entrenador_by_ci(entrenador_ci: int, session: Session = Depends(get_session)):
-    entrenador = session.exec(
-        select(Entrenador).where(Entrenador.ci == entrenador_ci)
-    ).first()
+@router.get("/{entrenador_id}/", response_model=MessageResponse[EntrenadorResponse])
+def get_entrenador_by_id(entrenador_id: int, session: Session = Depends(get_session)):
+    entrenador = session.get(Entrenador, entrenador_id)
     if not entrenador:
-        raise HTTPException(status_code=404, detail=f"No se encuentra ningun entrenador con la cedula {entrenador_ci}")
+        raise HTTPException(status_code=404, detail=f"No se encuentra ningun entrenador con la ID {entrenador_id}")
     return {"message": f"Entrenador {entrenador.nombre} {entrenador.apellido} encontrado de forma exitosa", "detail": entrenador}
 
-@router.get("/{entrenador_ci}/miembros/", response_model=list[MiembroResponse])
-def get_miembros_by_entrenador(entrenador_ci: int, session: Session = Depends(get_session)):
-    entrenador = session.exec(
-        select(Entrenador).where(
-            Entrenador.ci == entrenador_ci
-        )
-    ).first()
+@router.get("/{entrenador_id}/miembros/", response_model=MessageResponse[list[MiembroResponse]])
+def get_miembros_by_entrenador(entrenador_id: int, session: Session = Depends(get_session)):
+    entrenador = session.get(Entrenador, entrenador_id)
     if not entrenador:
-        raise HTTPException(status_code=404, detail=f"No existe un entrenador con la cedula {entrenador_ci}")
-    return entrenador.miembros
+        raise HTTPException(status_code=404, detail=f"No existe un entrenador con la ID {entrenador_id}")
+    if not entrenador.estado:
+        raise HTTPException(status_code=400, detail=f"El entrenador {entrenador.nombre} se encuentra inactivo, activelo para acceder a su informacion")
+    miembros = entrenador.miembros
+    if not miembros:
+        raise HTTPException(status_code=404, detail=f"El entrenador {entrenador.nombre} {entrenador.apellido} no tiene miembros asociados")
+    return {"message":f"Miembros asociados al entrenador {entrenador.nombre} {entrenador.apellido}:", "detail":miembros}
 
-@router.put("/update/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
-def put_entrenador(entrenador_ci: int, data: UpdateEntrenador, session: Session = Depends(get_session)):
-    entrenador = session.exec(select(Entrenador).where(Entrenador.ci==entrenador_ci)).first()
+@router.put("/update/{entrenador_id}/", response_model=MessageResponse[EntrenadorResponse])
+def put_entrenador(entrenador_id: int, data: UpdateEntrenador, session: Session = Depends(get_session)):
+    entrenador = session.get(Entrenador, entrenador_id)
     if not entrenador:
-        raise HTTPException(status_code=404, detail=f"No existe ningun entrenador asociado a la CI {entrenador_ci}")
+        raise HTTPException(status_code=404, detail=f"No existe ningun entrenador asociado a la ID {entrenador_id}")
     if not entrenador.estado:
         raise HTTPException(status_code=400, detail=f"El entrenador {entrenador.nombre} se encuentra inactivo")
     nombre = entrenador.nombre
@@ -119,11 +118,11 @@ def put_entrenador(entrenador_ci: int, data: UpdateEntrenador, session: Session 
     session.refresh(entrenador)
     return {"message":f"El entrenador {nombre} fue actualizado de forma exitosa", "detail":entrenador}
 
-@router.patch("/update/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
-def patch_entrenador(entrenador_ci: int, data: UpdateEntrenadorOptional, session: Session = Depends(get_session)):
-    entrenador = session.exec(select(Entrenador).where(Entrenador.ci==entrenador_ci)).first()
+@router.patch("/update/{entrenador_id}/", response_model=MessageResponse[EntrenadorResponse])
+def patch_entrenador(entrenador_id: int, data: UpdateEntrenadorOptional, session: Session = Depends(get_session)):
+    entrenador = session.get(Entrenador, entrenador_id)
     if not entrenador:
-        raise HTTPException(status_code=404, detail=f"No existe ningun entrenador asociado a la CI {entrenador_ci}")
+        raise HTTPException(status_code=404, detail=f"No existe ningun entrenador asociado a la ID {entrenador_id}")
     if not entrenador.estado:
         raise HTTPException(status_code=400, detail=f"El entrenador {entrenador.nombre} se encuentra inactivo")
     nombre = entrenador.nombre
@@ -147,11 +146,11 @@ def patch_entrenador(entrenador_ci: int, data: UpdateEntrenadorOptional, session
     session.refresh(entrenador)
     return {"message":f"El entrenador {nombre} fue actualizado de forma exitosa", "detail":entrenador}
 
-@router.delete("/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
-def inactivate(entrenador_ci: int, session: Session = Depends(get_session)):
-    entrenador = session.exec(select(Entrenador).where(Entrenador.ci==entrenador_ci)).first()
+@router.delete("/{entrenador_id}/", response_model=MessageResponse[EntrenadorResponse])
+def inactivate(entrenador_id: int, session: Session = Depends(get_session)):
+    entrenador = session.get(Entrenador, entrenador_id)
     if not entrenador:
-        raise HTTPException(status_code=404, detail=f"No existe ningun entrenador asociado a la CI {entrenador_ci}")
+        raise HTTPException(status_code=404, detail=f"No existe ningun entrenador asociado a la ID {entrenador_id}")
     if not entrenador.estado:
         raise HTTPException(status_code=400, detail=f"El entrenador {entrenador.nombre} ya se encuentra inactivo")
     entrenador.estado = False
@@ -159,11 +158,11 @@ def inactivate(entrenador_ci: int, session: Session = Depends(get_session)):
     session.refresh(entrenador)
     return {"message":f"El entrenador {entrenador.nombre} fue inactivado de forma exitosa", "detail":entrenador}
 
-@router.patch("/{entrenador_ci}/", response_model=MessageResponse[EntrenadorResponse])
-def activate(entrenador_ci: int, session: Session = Depends(get_session)):
-    entrenador = session.exec(select(Entrenador).where(Entrenador.ci==entrenador_ci)).first()
+@router.patch("/{entrenador_id}/", response_model=MessageResponse[EntrenadorResponse])
+def activate(entrenador_id: int, session: Session = Depends(get_session)):
+    entrenador = session.get(Entrenador, entrenador_id)
     if not entrenador:
-        raise HTTPException(status_code=404, detail=f"No existe ningun entrenador asociado a la CI {entrenador_ci}")
+        raise HTTPException(status_code=404, detail=f"No existe ningun entrenador asociado a la ID {entrenador_id}")
     if entrenador.estado:
         raise HTTPException(status_code=400, detail=f"El entrenador {entrenador.nombre} ya se encuentra activo")
     entrenador.estado = True

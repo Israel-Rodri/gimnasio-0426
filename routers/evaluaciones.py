@@ -26,20 +26,12 @@ def calcular_estado_imc(imc: float) -> str:
 
 @router.post("/", response_model=MessageResponse[EvaluacionFisicaResponse])
 def create_evaluacion(data: CreateEvaluacionFisica, session: Session = Depends(get_session)):
-    miembro = session.exec(
-        select(Miembro).where(
-            Miembro.ci == data.miembro_ci
-        )
-    ).first()
+    miembro = session.get(Miembro, data.miembro_id)
     if not miembro or not miembro.estado:
-        raise HTTPException(status_code=400, detail=f"El miembro con la cedula {data.miembro_ci} no se encuentra registrado o no se encuentra activo")
-    entrenador = session.exec(
-        select(Entrenador).where(
-            Entrenador.ci == data.entrenador_ci
-        )
-    ).first()
+        raise HTTPException(status_code=400, detail=f"El miembro con la ID {data.miembro_id} no se encuentra registrado o no se encuentra activo")
+    entrenador = session.get(Entrenador, data.entrenador_id)
     if not entrenador or not entrenador.estado:
-        raise HTTPException(status_code=400, detail=f"El entrenador con la ID {data.entrenador_ci} no se encuentra registrado o no se encuentra activo")
+        raise HTTPException(status_code=400, detail=f"El entrenador con la ID {data.entrenador_id} no se encuentra registrado o no se encuentra activo")
     existing = session.exec(
         select(EvaluacionFisica).where(
             EvaluacionFisica.fecha_evaluacion == data.fecha_evaluacion,
