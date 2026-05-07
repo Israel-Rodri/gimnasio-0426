@@ -55,7 +55,7 @@ def get_active_entrenadores(session: Session = Depends(get_session)):
 
 @router.get("/filter/", response_model=list[EntrenadorResponse])
 def filter_entrenador(
-    entrenador_ci: Optional[int] = Query(default=None),
+    entrenador_ci: Optional[str] = Query(default=None),
     entrenador_nombre: Optional[str] = Query(default=None),
     entrenador_apellido: Optional[str] = Query(default=None),
     entrenador_especialidad: Optional[str] = Query(default=None),
@@ -67,7 +67,7 @@ def filter_entrenador(
         raise HTTPException(status_code=400, detail="Debe proporcionar al menos uno de los campos para filtrar")
     query = select(Entrenador).where(Entrenador.estado==True)
     if entrenador_ci:
-        query = query.where(Entrenador.ci == entrenador_ci)
+        query = query.where(Entrenador.ci.ilike(f"%{entrenador_ci}%"))
     if entrenador_nombre:
         query = query.where(Entrenador.nombre.ilike(f"%{entrenador_nombre}%"))
     if entrenador_apellido:

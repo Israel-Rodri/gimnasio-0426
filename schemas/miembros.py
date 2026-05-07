@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import date
 
 class CreateMiembro(SQLModel):
-    ci: int
+    ci: str
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     fecha_nac: date
@@ -16,7 +16,7 @@ class CreateMiembro(SQLModel):
     sede_id: int
 
 class UpdateMiembro(SQLModel):
-    ci: int
+    ci: str
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     fecha_nac: date
@@ -26,7 +26,7 @@ class UpdateMiembro(SQLModel):
     sede_id: int
 
 class UpdateMiembroOptional(SQLModel):
-    ci: Optional[int] = Field(default=None)
+    ci: Optional[str] = Field(default=None)
     nombre: Optional[str] = Field(default=None, max_length=50)
     apellido: Optional[str] = Field(default=None, max_length=50)
     fecha_nac: Optional[date] = Field(default=None)
@@ -37,7 +37,7 @@ class UpdateMiembroOptional(SQLModel):
 
 class MiembroResponse(SQLModel):
     id: int
-    ci: int
+    ci: str
     nombre: str
     apellido: str
     fecha_nac: date

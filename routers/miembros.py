@@ -71,7 +71,7 @@ def get_active_miembro(session: Session = Depends(get_session)):
 
 @router.get("/filter/", response_model=list[MiembroResponse])
 def filter_miembro(
-        miembro_ci: Optional[int] = Query(default=None),
+        miembro_ci: Optional[str] = Query(default=None),
         miembro_nombre: Optional[str] = Query(default=None),
         miembro_apellido: Optional[str] = Query(default=None),
         miembro_email: Optional[EmailStr] = Query(default=None),
@@ -85,7 +85,7 @@ def filter_miembro(
         raise HTTPException(status_code=400, detail="Debe proporcionar al menos uno de los campos para filtrar")
     query = select(Miembro).where(Miembro.estado==True)
     if miembro_ci:
-        query = query.where(Miembro.ci == miembro_ci)
+        query = query.where(Miembro.ci.ilike(f"%{miembro_ci}%"))
     if miembro_nombre:
         query = query.where(Miembro.nombre.ilike(f"%{miembro_nombre}%"))
     if miembro_apellido:

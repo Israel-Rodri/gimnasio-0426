@@ -3,7 +3,7 @@ from typing import Optional, List
 from pydantic import EmailStr
 
 class CreateEntrenador(SQLModel):
-    ci: int
+    ci: str
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     especialidad: Optional[str] = Field(default=None, max_length=100)
@@ -14,7 +14,7 @@ class CreateEntrenador(SQLModel):
     sede_id: int
 
 class UpdateEntrenador(SQLModel):
-    ci: int
+    ci: str
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     especialidad: Optional[str] = Field(default=None, max_length=100)
@@ -24,7 +24,7 @@ class UpdateEntrenador(SQLModel):
     sede_id: int
 
 class UpdateEntrenadorOptional(SQLModel):
-    ci: Optional[int] = Field(default=None)
+    ci: Optional[str] = Field(default=None)
     nombre: Optional[str] = Field(default=None, max_length=50)
     apellido: Optional[str] = Field(default=None, max_length=50)
     especialidad: Optional[str] = Field(default=None, max_length=100)
@@ -35,7 +35,7 @@ class UpdateEntrenadorOptional(SQLModel):
 
 class EntrenadorResponse(SQLModel):
     id: int
-    ci: int
+    ci: str
     nombre: str
     apellido: str
     especialidad: Optional[str] = None

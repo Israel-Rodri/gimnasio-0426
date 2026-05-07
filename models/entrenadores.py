@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class Entrenador(SQLModel, table=True):
     __tablename__ = "entrenadores"
     id: int | None = Field(default=None, primary_key=True, sa_column_kwargs={"autoincrement":True})
-    ci: int = Field(max_length=20)
+    ci: str = Field(max_length=20)
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     especialidad: Optional[str] = Field(default=None, max_length=100)

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class Miembro(SQLModel, table=True):
     __tablename__ = "miembros"
     id: int | None = Field(default=None, primary_key=True, sa_column_kwargs={"autoincrement":True})
-    ci: int = Field(max_length=20)
+    ci: str = Field(max_length=20)
     nombre: str = Field(max_length=50)
     apellido: str = Field(max_length=50)
     fecha_nac: date
