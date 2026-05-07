@@ -17,9 +17,7 @@ class Plan(SQLModel, table=True):
     precio: float = Field(gt=0)
     beneficios: List[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     estado: bool = Field(default=True)
-    #Foreign Keys
-    miembro_id: int = Field(foreign_key="miembros.id")
     #Relaciones
-    miembro: Optional["Miembro"] = Relationship(back_populates="planes")
+    miembros: list["Miembro"] = Relationship(back_populates="planes")
     pagos: list["Pago"] = Relationship(back_populates="planes", link_model=PagosPlanesLink)
     rutinas: list["Rutina"] = Relationship(back_populates="planes", link_model=RutinasPlanesLink)

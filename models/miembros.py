@@ -25,9 +25,10 @@ class Miembro(SQLModel, table=True):
     entrenador_id: Optional[int] = Field(default=None, foreign_key="entrenadores.id", index=True)
     #Foreign keys
     sede_id: int = Field(foreign_key="sedes.id")
+    plan_id: int = Field(foreign_key="planes.id")
     #Relaciones
     sede: Optional["Sede"] = Relationship(back_populates="miembros")
+    planes: Optional["Plan"] = Relationship(back_populates="miembros")
     evaluaciones: list["EvaluacionFisica"] = Relationship(back_populates="miembro")
-    planes: list["Plan"] = Relationship(back_populates="miembro")
     pagos: list["Pago"] = Relationship(back_populates="miembro")
     entrenadores: list["Entrenador"] = Relationship(back_populates="miembros", link_model=MiembrosEntrenadoresLink)
