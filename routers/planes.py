@@ -23,16 +23,12 @@ def create_plan(data: CreatePlan, session: Session = Depends(get_session)):
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Ya existe un plan con los datos ingresados")
-    miembro = session.get(Miembro, data.miembro_id)
-    if not miembro:
-        raise HTTPException(status_code=404, detail=f"El miembro con la ID {data.miembro_id} no se encuentra registrado")
     plan = Plan(
         nombre = data.nombre,
         duracion = data.duracion,
         precio = data.precio,
         beneficios = data.beneficios,
-        estado = data.estado,
-        miembro_id = miembro.id
+        estado = data.estado
     )
     session.add(plan)
     session.commit()

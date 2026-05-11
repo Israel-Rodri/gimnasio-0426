@@ -22,7 +22,6 @@ class Miembro(SQLModel, table=True):
     email: Optional[EmailStr] = Field(default=None, max_length=255, unique=True, index=True)
     fecha_inscripcion: date = Field(default_factory=date.today)
     estado: bool = Field(default=True)
-    entrenador_id: Optional[int] = Field(default=None, foreign_key="entrenadores.id", index=True)
     #Foreign keys
     sede_id: int = Field(foreign_key="sedes.id")
     plan_id: int = Field(foreign_key="planes.id")

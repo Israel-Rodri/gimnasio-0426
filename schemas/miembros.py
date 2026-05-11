@@ -12,8 +12,8 @@ class CreateMiembro(SQLModel):
     email: Optional[EmailStr] = Field(default=None, max_length=255)
     fecha_inscripcion: date = Field(default_factory=date.today)
     estado: bool = Field(default=True)
-    entrenador_id: Optional[int] = Field(default=None)
     sede_id: int
+    plan_id: int
 
 class UpdateMiembro(SQLModel):
     ci: str
@@ -22,8 +22,8 @@ class UpdateMiembro(SQLModel):
     fecha_nac: date
     telefono: str = Field(max_length=20)
     email: EmailStr = Field(max_length=255)
-    entrenador_id: Optional[int] = Field(default=None)
     sede_id: int
+    plan_id: int
 
 class UpdateMiembroOptional(SQLModel):
     ci: Optional[str] = Field(default=None)
@@ -32,8 +32,8 @@ class UpdateMiembroOptional(SQLModel):
     fecha_nac: Optional[date] = Field(default=None)
     telefono: Optional[str] = Field(default=None, max_length=20)
     email: Optional[EmailStr] = Field(default=None, max_length=255)
-    entrenador_id: Optional[int] = Field(default=None)
     sede_id: Optional[int] = Field(default=None)
+    plan_id: Optional[int] = Field(default=None)
 
 class MiembroResponse(SQLModel):
     id: int
@@ -44,5 +44,5 @@ class MiembroResponse(SQLModel):
     telefono: Optional[str] = None
     email: Optional[EmailStr] = None
     fecha_inscripcion: date
-    entrenador_id: Optional[int] = None
     sede_id: int
+    plan_id: int

@@ -7,6 +7,7 @@ from database import get_session
 from models.miembros import Miembro
 from models.entrenadores import Entrenador
 from models.sedes import Sede
+from models.planes import Plan
 from schemas.miembros import CreateMiembro, UpdateMiembro, UpdateMiembroOptional, MiembroResponse
 from schemas.evaluaciones import EvaluacionFisicaResponse
 from schemas.planes import PlanResponse
@@ -28,10 +29,9 @@ def create_miembro(data: CreateMiembro, session: Session = Depends(get_session))
     sede = session.get(Sede, data.sede_id)
     if not sede:
         raise HTTPException(status_code=404, detail=f"La sede con la ID {data.sede_id} no se encuentra registrada")
-    if data.entrenador_id is not None:
-        entrenador = session.get(Entrenador, data.entrenador_id)
-        if not entrenador:
-            raise HTTPException(status_code=404, detail=f"No existe un entrenador con la ID {data.entrenador_id}")
+    plan = session.get(Plan, data.plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"El plan con la ID {data.plan_id} no se encuentra registrado")
     miembro = Miembro(
         ci = data.ci,
         nombre = data.nombre,
@@ -41,8 +41,8 @@ def create_miembro(data: CreateMiembro, session: Session = Depends(get_session))
         email = data.email,
         fecha_inscripcion = data.fecha_inscripcion,
         estado = data.estado,
-        entrenador_id = data.entrenador_id,
-        sede_id = data.sede_id
+        sede_id = data.sede_id,
+        plan_id = data.plan_id
     )
     session.add(miembro)
     session.commit()

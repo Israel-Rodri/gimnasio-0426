@@ -7,7 +7,6 @@ class CreatePlan(SQLModel):
     precio: float = Field(gt=0)
     beneficios: List[str] = Field(default_factory=list)
     estado: bool = Field(default=True)
-    miembro_id: int
 
 class UpdatePlan(SQLModel):
     nombre: str = Field(max_length=50)
@@ -27,4 +26,3 @@ class PlanResponse(SQLModel):
     duracion: float
     precio: float
     beneficios: List[str] = []
-    miembro_id: int
